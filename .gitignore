@@ -1,23 +1,27 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-ENV/
-.venv
-*.egg-info/
-dist/
-build/
+# Security & Secrets
+.env
+.env.local
+.env.production
+.env.development
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
+credentials/
+config/secrets.json
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-.rizz_tasks.db
-.rizz_api.db
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
 
 # IDE
 .vscode/
@@ -25,21 +29,52 @@ build/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
-Thumbs.db
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+*.egg
 
 # Logs
 *.log
+logs/
 
-# Environment
-.env
-.env.local
+# Database
+*.db
+*.sqlite
+*.sqlite3
+!.gitkeep
 
-# Manifest
-organize_manifest.json
+# Uploads & Temp
+uploads/
+temp/
+tmp/
+*.tmp
 
-# Node (if added later)
-node_modules/
-package-lock.json
+# Docker
+.docker/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+coverage.xml
+*.cover
+
+# ML Models (large files)
+models/*.h5
+models/*.pth
+models/*.pb
+*.onnx
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Project specific
+api-server/instance/
+api-server/rizz_api.db
+*.ipynb_checkpoints
