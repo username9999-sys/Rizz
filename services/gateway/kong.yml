@@ -1,0 +1,178 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  # Main API Server
+  - name: api-server
+    url: http://api:5000
+    routes:
+      - name: api-route
+        paths:
+          - /api
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 100
+          policy: redis
+          redis_host: redis
+          redis_port: 6379
+      - name: cors
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Content-Type
+            - Authorization
+          max_age: 3600
+      - name: jwt
+        config:
+          key_claim_name: user_id
+          secret_is_base64: false
+          run_on_preflight: true
+
+  # Analytics Service
+  - name: analytics
+    url: http://analytics:8001
+    routes:
+      - name: analytics-route
+        paths:
+          - /analytics
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 200
+          policy: redis
+          redis_host: redis
+          redis_port: 6379
+      - name: cors
+        config:
+          origins:
+            - "*"
+
+  # Notification Service
+  - name: notifications
+    url: http://notifications:8002
+    routes:
+      - name: notifications-route
+        paths:
+          - /notifications
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 50
+          policy: redis
+          redis_host: redis
+          redis_port: 6379
+      - name: cors
+        config:
+          origins:
+            - "*"
+
+  # Search Service
+  - name: search
+    url: http://search:8003
+    routes:
+      - name: search-route
+        paths:
+          - /search
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: redis
+          redis_host: redis
+          redis_port: 6379
+      - name: cors
+        config:
+          origins:
+            - "*"
+      - name: proxy-cache
+        config:
+          strategy: redis
+          redis_host: redis
+          redis_port: 6379
+          content_type:
+            - application/json
+          cache_ttl: 300
+
+  # Storage Service
+  - name: storage
+    url: http://storage:8004
+    routes:
+      - name: storage-route
+        paths:
+          - /storage
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 100
+          policy: redis
+          redis_host: redis
+          redis_port: 6379
+      - name: cors
+        config:
+          origins:
+            - "*"
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - X-Max-FileSize:104857600
+
+  # ML Service
+  - name: ml-service
+    url: http://ml-service:8005
+    routes:
+      - name: ml-route
+        paths:
+          - /ml
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 100
+          policy: redis
+          redis_host: redis
+          redis_port: 6379
+      - name: cors
+        config:
+          origins:
+            - "*"
+
+# Global plugins
+plugins:
+  - name: prometheus
+    config:
+      per_consumer: true
+      status_code_metrics: true
+      latency_metrics: true
+      bandwidth_metrics: true
+      upstream_health_metrics: true
+
+# Consumers (for API authentication)
+consumers:
+  - username: admin
+    keyauth_credentials:
+      - key: admin-api-key-change-me
+  - username: service-account
+    keyauth_credentials:
+      - key: service-key-change-me
+
+# ACL Groups
+acls:
+  - consumer: admin
+    group: admin
+  - consumer: service-account
+    group: services

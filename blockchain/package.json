@@ -1,0 +1,37 @@
+{
+  "name": "rizz-blockchain-platform",
+  "version": "1.0.0",
+  "description": "Enterprise Blockchain & Cryptocurrency Platform",
+  "main": "src/api/index.js",
+  "scripts": {
+    "start": "node src/api/index.js",
+    "dev": "nodemon src/api/index.js",
+    "contract:compile": "npx hardhat compile",
+    "contract:deploy": "npx hardhat run scripts/deploy.js",
+    "contract:test": "npx hardhat test"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^8.0.3",
+    "web3": "^4.3.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "ethers": "^6.9.0",
+    "redis": "^4.6.12",
+    "socket.io": "^4.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "dotenv": "^16.3.1",
+    "winston": "^3.11.0",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.5"
+  },
+  "devDependencies": {
+    "hardhat": "^2.19.2",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "nodemon": "^3.0.2"
+  },
+  "author": "username9999",
+  "license": "MIT"
+}
