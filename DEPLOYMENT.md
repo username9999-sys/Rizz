@@ -1,137 +1,128 @@
-# 🚀 Rizz Platform - Deployment Guide
+# 🚀 DEPLOYMENT GUIDE
 
-**Enterprise-scale deployment guide** untuk production environment.
+**Complete guide for deploying Rizz Platform to production**
 
 ---
 
-## 📋 Table of Contents
+## 📋 TABLE OF CONTENTS
 
 1. [Prerequisites](#prerequisites)
-2. [Local Development](#local-development)
+2. [Production Checklist](#production-checklist)
 3. [Docker Deployment](#docker-deployment)
 4. [Kubernetes Deployment](#kubernetes-deployment)
-5. [Helm Deployment](#helm-deployment)
-6. [Production Checklist](#production-checklist)
-7. [Monitoring & Logging](#monitoring--logging)
-8. [Troubleshooting](#troubleshooting)
+5. [Cloud Deployment](#cloud-deployment)
+6. [Backup & Recovery](#backup--recovery)
+7. [Monitoring Setup](#monitoring-setup)
+8. [Security Hardening](#security-hardening)
 
 ---
 
-## Prerequisites
+## ✅ PREREQUISITES
 
 ### Required Software
-- **Docker** 20.10+
-- **Docker Compose** 2.0+
-- **kubectl** 1.28+ (for K8s)
-- **helm** 3.13+ (for Helm)
-- **Python** 3.11+ (for local dev)
+- Docker 20.10+
+- Docker Compose 2.0+
+- Kubernetes 1.25+ (for K8s deployment)
+- Helm 3.0+ (for Helm charts)
 
 ### Infrastructure Requirements
-- **Minimum**: 2 CPU, 4GB RAM, 20GB Storage
-- **Recommended**: 4 CPU, 8GB RAM, 50GB Storage
-- **Production**: 8+ CPU, 16GB+ RAM, 100GB+ SSD
+- **Minimum:** 8 CPU, 16GB RAM, 100GB Storage
+- **Recommended:** 16 CPU, 32GB RAM, 500GB SSD
+- **Production:** 32+ CPU, 64GB+ RAM, 1TB+ NVMe
+
+### Domain & SSL
+- Domain name configured
+- SSL certificates (Let's Encrypt or commercial)
+- DNS records configured
 
 ---
 
-## Local Development
+## ✅ PRODUCTION CHECKLIST
 
-### Option 1: Docker Compose
+### Before Deployment
+
+- [ ] All tests passing (`npm test` / `pytest`)
+- [ ] Code review completed
+- [ ] Security scan completed
+- [ ] Performance tests passed
+- [ ] Documentation updated
+- [ ] Environment variables configured
+- [ ] Database migrations ready
+- [ ] Backup strategy in place
+- [ ] Monitoring configured
+- [ ] Rollback plan ready
+
+### Security
+
+- [ ] Change all default passwords
+- [ ] Rotate all secrets and keys
+- [ ] Enable firewall rules
+- [ ] Configure SSL/TLS
+- [ ] Enable rate limiting
+- [ ] Configure CORS properly
+- [ ] Enable security headers
+- [ ] Set up WAF (Web Application Firewall)
+
+### Database
+
+- [ ] Database backups configured
+- [ ] Replication configured (for HA)
+- [ ] Connection pooling configured
+- [ ] Indexes optimized
+- [ ] Query performance tested
+
+---
+
+## 🐳 DOCKER DEPLOYMENT
+
+### Single Server Deployment
 
 ```bash
-# Clone repository
+# 1. Clone repository
 git clone https://github.com/username9999-sys/Rizz.git
 cd Rizz-Project
 
-# Copy environment file
+# 2. Create .env file
 cp .env.example .env
+# Edit .env with production values
 
-# Start all services
-docker-compose up -d
-
-# Check status
-docker-compose ps
-
-# View logs
-docker-compose logs -f api
-
-# Stop services
-docker-compose down
-```
-
-### Option 2: Local Python Environment
-
-```bash
-# Navigate to API server
-cd api-server
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-.\venv\Scripts\activate  # Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set environment variables
-export FLASK_ENV=development
-export DATABASE_URL=postgresql://user:pass@localhost/rizz_api
-export SECRET_KEY=dev-secret-key
-
-# Start PostgreSQL (Docker)
-docker run -d --name postgres \
-  -e POSTGRES_DB=rizz_api \
-  -e POSTGRES_USER=user \
-  -e POSTGRES_PASSWORD=pass \
-  -p 5432:5432 \
-  postgres:15-alpine
-
-# Run migrations
-alembic upgrade head
-
-# Start server
-python app.py
-```
-
----
-
-## Docker Deployment
-
-### Build Images
-
-```bash
-# Build API server
-docker build -t rizz-api:latest ./api-server
-
-# Build all services
+# 3. Build images
 docker-compose build
 
-# Push to registry
-docker tag rizz-api:latest registry.com/rizz-api:latest
-docker push registry.com/rizz-api:latest
+# 4. Start services
+docker-compose up -d
+
+# 5. Check status
+docker-compose ps
+
+# 6. View logs
+docker-compose logs -f
+
+# 7. Run health checks
+curl http://localhost:5000/api/health
 ```
 
-### Production Docker Compose
+### Multi-Server Deployment
 
-```yaml
+```bash
 # docker-compose.prod.yml
 version: '3.8'
 
 services:
   api:
-    image: registry.com/rizz-api:latest
-    environment:
-      FLASK_ENV: production
-      SECRET_KEY: ${SECRET_KEY}
-      DATABASE_URL: ${DATABASE_URL}
+    image: rizz-api:latest
     deploy:
       replicas: 3
       resources:
         limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
           cpus: '0.5'
           memory: 512M
-    restart: always
-
+      restart_policy:
+        condition: on-failure
+    
   nginx:
     image: nginx:alpine
     ports:
@@ -142,301 +133,393 @@ services:
       - ./ssl:/etc/nginx/ssl
     depends_on:
       - api
-    restart: always
 ```
 
+### Docker Swarm
+
 ```bash
-# Deploy with production config
-docker-compose -f docker-compose.prod.yml up -d
+# Initialize swarm
+docker swarm init
+
+# Deploy stack
+docker stack deploy -c docker-compose.prod.yml rizz
+
+# Check status
+docker service ls
+docker service ps rizz_api
+
+# Scale service
+docker service scale rizz_api=5
 ```
 
 ---
 
-## Kubernetes Deployment
+## ☸️ KUBERNETES DEPLOYMENT
 
-### Manual K8s Deployment
+### Prerequisites
 
 ```bash
-# Create namespace
+# Install kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+
+# Install Helm
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+```
+
+### Deploy to Kubernetes
+
+```bash
+# 1. Create namespace
 kubectl apply -f k8s/namespace.yaml
 
-# Create secrets (update values first!)
-kubectl apply -f k8s/secrets.yaml -n rizz-platform
+# 2. Create secrets
+kubectl create secret generic rizz-secrets \
+  --from-literal=jwt-secret='your-secret' \
+  --from-literal=db-password='db-password' \
+  -n rizz
 
-# Create ConfigMap
-kubectl apply -f k8s/configmap.yaml -n rizz-platform
+# 3. Apply configurations
+kubectl apply -f k8s/configmap.yaml -n rizz
 
-# Deploy PostgreSQL
-kubectl apply -f k8s/postgres-statefulset.yaml -n rizz-platform
-kubectl apply -f k8s/postgres-service.yaml -n rizz-platform
+# 4. Deploy databases
+kubectl apply -f k8s/postgres-statefulset.yaml -n rizz
+kubectl apply -f k8s/redis-deployment.yaml -n rizz
 
-# Deploy Redis
-kubectl apply -f k8s/redis-deployment.yaml -n rizz-platform
-kubectl apply -f k8s/redis-service.yaml -n rizz-platform
+# 5. Deploy applications
+kubectl apply -f k8s/api-deployment.yaml -n rizz
+kubectl apply -f k8s/api-service.yaml -n rizz
 
-# Deploy API
-kubectl apply -f k8s/api-deployment.yaml -n rizz-platform
-kubectl apply -f k8s/api-service.yaml -n rizz-platform
+# 6. Check status
+kubectl get pods -n rizz
+kubectl get services -n rizz
 
-# Deploy Ingress
-kubectl apply -f k8s/ingress.yaml -n rizz-platform
-
-# Check deployment
-kubectl get all -n rizz-platform
+# 7. Access application
+kubectl port-forward svc/rizz-api 5000:5000 -n rizz
 ```
 
-### Verify Deployment
+### Helm Deployment
 
 ```bash
-# Check pods
-kubectl get pods -n rizz-platform
+# Add Helm repo
+helm repo add rizz https://charts.rizz.dev
 
-# Check services
-kubectl get svc -n rizz-platform
-
-# View logs
-kubectl logs -f deployment/rizz-api -n rizz-platform
-
-# Test health endpoint
-kubectl port-forward svc/rizz-api 5000:5000 -n rizz-platform
-curl http://localhost:5000/health
-```
-
----
-
-## Helm Deployment
-
-### Install Chart
-
-```bash
-# Navigate to helm chart
-cd helm/rizz-platform
-
-# Add Helm repo (if publishing)
-helm repo add rizz https://your-helm-repo.com
-helm repo update
-
-# Install with default values
-helm install rizz-release . -n rizz-platform --create-namespace
-
-# Install with custom values
-helm install rizz-release . \
-  -n rizz-platform \
+# Install chart
+helm install rizz rizz/rizz-platform \
+  --namespace rizz \
   --create-namespace \
-  --set api.replicaCount=5 \
-  --set api.secrets.secretKey=$(openssl rand -hex 32) \
-  --set api.secrets.jwtSecretKey=$(openssl rand -hex 32) \
-  --set postgresql.auth.password=$(openssl rand -base64 24)
+  -f values.prod.yaml
 
-# Install with values file
-helm install rizz-release . \
-  -n rizz-platform \
-  --create-namespace \
-  -f values-production.yaml
+# Check status
+helm list -n rizz
+
+# Upgrade
+helm upgrade rizz rizz/rizz-platform -n rizz -f values.prod.yaml
+
+# Uninstall
+helm uninstall rizz -n rizz
 ```
 
-### Upgrade & Rollback
-
-```bash
-# Upgrade release
-helm upgrade rizz-release . -n rizz-platform
-
-# Rollback to previous version
-helm rollback rizz-release -n rizz-platform
-
-# View history
-helm history rizz-release -n rizz-platform
-```
-
-### Uninstall
-
-```bash
-# Uninstall release
-helm uninstall rizz-release -n rizz-platform
-
-# Uninstall with PVCs
-helm uninstall rizz-release -n rizz-platform --purge
-```
-
----
-
-## Production Checklist
-
-### Security
-- [ ] Change all default passwords
-- [ ] Generate secure SECRET_KEY and JWT_SECRET_KEY
-- [ ] Enable HTTPS with valid SSL certificate
-- [ ] Configure CORS for specific domains
-- [ ] Enable rate limiting
-- [ ] Review and restrict network policies
-- [ ] Enable pod security policies
-- [ ] Configure secrets management (Vault/AWS Secrets Manager)
-
-### Database
-- [ ] Enable PostgreSQL WAL archiving
-- [ ] Configure automated backups
-- [ ] Set up replication for HA
-- [ ] Tune PostgreSQL configuration (shared_buffers, work_mem)
-- [ ] Create database users with minimal privileges
-
-### Monitoring
-- [ ] Deploy Prometheus stack
-- [ ] Configure alerting rules
-- [ ] Set up Grafana dashboards
-- [ ] Enable distributed tracing (Jaeger)
-- [ ] Configure log aggregation (ELK/Loki)
-
-### Performance
-- [ ] Configure HPA for auto-scaling
-- [ ] Set resource requests/limits
-- [ ] Enable Redis caching
-- [ ] Configure database connection pooling
-- [ ] Enable CDN for static assets
-
-### High Availability
-- [ ] Deploy across multiple availability zones
-- [ ] Configure pod disruption budgets
-- [ ] Set up load balancing
-- [ ] Enable database replication
-- [ ] Test failover procedures
-
----
-
-## Monitoring & Logging
-
-### Prometheus Metrics
-
-Access metrics at: `/metrics`
-
-Key metrics:
-- `http_requests_total` - Total HTTP requests
-- `http_request_duration_seconds` - Request latency
-- `python_gc_collections_total` - Garbage collection
-
-### Grafana Dashboard
-
-Import dashboard ID: (create custom dashboard)
-
-Panels:
-- Request rate (req/s)
-- Response time (p50, p95, p99)
-- Error rate (%)
-- CPU/Memory usage
-- Database connections
-- Cache hit rate
-
-### Log Aggregation
+### Auto-scaling
 
 ```yaml
-# Fluentd configuration example
-<match rizz.**>
-  @type elasticsearch
-  host elasticsearch.logging.svc
-  port 9200
-  logstash_format true
-  logstash_prefix rizz-logs
-</match>
+# k8s/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-hpa
+  namespace: rizz
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+```
+
+```bash
+# Apply HPA
+kubectl apply -f k8s/hpa.yaml
+
+# Check HPA
+kubectl get hpa -n rizz
 ```
 
 ---
 
-## Troubleshooting
+## ☁️ CLOUD DEPLOYMENT
 
-### Common Issues
+### AWS Deployment
 
-#### Pod Not Starting
 ```bash
-# Check pod status
-kubectl describe pod <pod-name> -n rizz-platform
+# Using ECS
+aws ecs create-cluster --cluster-name rizz-cluster
 
-# View logs
-kubectl logs <pod-name> -n rizz-platform
+# Create task definition
+aws ecs register-task-definition \
+  --cli-input-json file://task-definition.json
 
-# Check events
-kubectl get events -n rizz-platform --sort-by='.lastTimestamp'
+# Create service
+aws ecs create-service \
+  --cluster rizz-cluster \
+  --service-name rizz-api \
+  --task-definition rizz-api \
+  --desired-count 3 \
+  --launch-type FARGATE
 ```
 
-#### Database Connection Error
-```bash
-# Test connectivity
-kubectl exec -it <pod-name> -n rizz-platform -- \
-  psql -h postgres -U rizz_user -d rizz_api
+### Google Cloud
 
-# Check secrets
-kubectl get secret rizz-api-secret -n rizz-platform -o jsonpath='{.data.DATABASE_URL}' | base64 -d
+```bash
+# Using GKE
+gcloud container clusters create rizz-cluster \
+  --num-nodes=3 \
+  --machine-type=e2-standard-4
+
+# Deploy
+kubectl apply -f k8s/
+
+# Expose
+kubectl expose deployment api \
+  --type=LoadBalancer \
+  --port=80 \
+  --target-port=5000
 ```
 
-#### High Memory Usage
-```bash
-# Check resource usage
-kubectl top pods -n rizz-platform
-
-# Adjust limits
-kubectl edit deployment rizz-api -n rizz-platform
-```
-
-#### Slow Responses
-```bash
-# Check database queries
-kubectl logs -f deployment/rizz-api -n rizz-platform | grep "slow_query"
-
-# Enable query logging in PostgreSQL
-kubectl exec -it postgres-0 -n rizz-platform -- \
-  psql -c "ALTER SYSTEM SET log_min_duration_statement = 1000;"
-```
-
-### Emergency Rollback
+### Azure
 
 ```bash
-# Kubernetes rollback
-kubectl rollout undo deployment/rizz-api -n rizz-platform
+# Using AKS
+az aks create \
+  --resource-group rizz-rg \
+  --name rizz-aks \
+  --node-count 3
 
-# Helm rollback
-helm rollback rizz-release -n rizz-platform
-
-# Scale down for emergency
-kubectl scale deployment rizz-api --replicas=0 -n rizz-platform
+# Deploy
+kubectl apply -f k8s/
 ```
 
 ---
 
-## Performance Tuning
+## 💾 BACKUP & RECOVERY
 
-### PostgreSQL Tuning
+### Database Backup
 
-```sql
--- Recommended settings for 8GB RAM
-ALTER SYSTEM SET shared_buffers = '2GB';
-ALTER SYSTEM SET effective_cache_size = '6GB';
-ALTER SYSTEM SET maintenance_work_mem = '512MB';
-ALTER SYSTEM SET work_mem = '16MB';
-ALTER SYSTEM SET max_connections = 100;
-SELECT pg_reload_conf();
+```bash
+#!/bin/bash
+# backup.sh
+
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/backups"
+
+# PostgreSQL
+pg_dump -U postgres rizz > ${BACKUP_DIR}/postgres_${DATE}.sql
+
+# MongoDB
+mongodump --db rizz --out ${BACKUP_DIR}/mongo_${DATE}
+
+# Redis
+redis-cli SAVE
+cp /var/lib/redis/dump.rdb ${BACKUP_DIR}/redis_${DATE}.rdb
+
+# Compress
+tar -czf ${BACKUP_DIR}/backup_${DATE}.tar.gz ${BACKUP_DIR}/*.sql ${BACKUP_DIR}/mongo_* ${BACKUP_DIR}/*.rdb
+
+# Upload to S3
+aws s3 cp ${BACKUP_DIR}/backup_${DATE}.tar.gz s3://rizz-backups/
+
+# Keep only last 7 days
+find ${BACKUP_DIR} -name "backup_*.tar.gz" -mtime +7 -delete
 ```
 
-### Application Tuning
+### Automated Backups (Cron)
 
-```python
-# gunicorn.conf.py
-workers = 4
-worker_class = 'sync'
-worker_connections = 1000
-timeout = 120
-keepalive = 5
-threads = 2
+```bash
+# Edit crontab
+crontab -e
+
+# Add backup job (daily at 2 AM)
+0 2 * * * /path/to/backup.sh
+```
+
+### Disaster Recovery
+
+```bash
+#!/bin/bash
+# restore.sh
+
+BACKUP_FILE=$1
+
+# Download from S3
+aws s3 cp s3://rizz-backups/${BACKUP_FILE} .
+
+# Extract
+tar -xzf ${BACKUP_FILE}
+
+# Restore PostgreSQL
+psql -U postgres rizz < postgres_*.sql
+
+# Restore MongoDB
+mongorestore mongo_*/
+
+# Restore Redis
+cp redis_*.rdb /var/lib/redis/dump.rdb
+redis-cli BGSAVE
 ```
 
 ---
 
-## Support
+## 📊 MONITORING SETUP
 
-For issues and questions:
-- GitHub Issues: https://github.com/username9999-sys/Rizz/issues
-- Email: faridalfarizi179@gmail.com
-- Documentation: https://github.com/username9999-sys/Rizz/wiki
+### Prometheus Configuration
+
+```yaml
+# prometheus.yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'api'
+    static_configs:
+      - targets: ['api:5000']
+    metrics_path: '/metrics'
+  
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+```
+
+### Grafana Dashboards
+
+Import these dashboards:
+- **API Performance:** ID 10826
+- **Node Exporter:** ID 1860
+- **PostgreSQL:** ID 9628
+- **MongoDB:** ID 2583
+- **Redis:** ID 763
+
+### Alert Rules
+
+```yaml
+# alert_rules.yml
+groups:
+- name: rizz_alerts
+  rules:
+  - alert: HighCPU
+    expr: avg(rate(process_cpu_seconds_total[5m])) > 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage detected"
+  
+  - alert: ServiceDown
+    expr: up == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Service {{ $labels.job }} is down"
+```
 
 ---
 
-**Version**: 2.0.0  
-**Last Updated**: 2024  
-**Maintained by**: username9999
+## 🔒 SECURITY HARDENING
+
+### Nginx Security Configuration
+
+```nginx
+# nginx.conf
+server {
+    listen 443 ssl http2;
+    server_name api.rizz.dev;
+    
+    # SSL
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    
+    # Security Headers
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Content-Security-Policy "default-src 'self'" always;
+    
+    # Rate Limiting
+    limit_req zone=api_limit burst=20 nodelay;
+    
+    location / {
+        proxy_pass http://api:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+### Firewall Rules (UFW)
+
+```bash
+# Enable firewall
+ufw enable
+
+# Allow SSH
+ufw allow 22/tcp
+
+# Allow HTTP/HTTPS
+ufw allow 80/tcp
+ufw allow 443/tcp
+
+# Allow specific service ports
+ufw allow 5000/tcp  # API
+ufw allow 3000/tcp  # Web
+
+# Deny all other incoming
+ufw default deny incoming
+
+# Check status
+ufw status verbose
+```
+
+### Security Scanning
+
+```bash
+# Scan Docker images
+trivy image rizz-api:latest
+
+# Scan code
+npm audit
+snyk test
+
+# Scan dependencies
+pip-audit
+```
+
+---
+
+## 📞 SUPPORT
+
+For deployment issues:
+- **Documentation:** DOCS.md
+- **GitHub Issues:** https://github.com/username9999-sys/Rizz/issues
+- **Email:** support@rizz.dev
+
+---
+
+**Last Updated:** March 2026
