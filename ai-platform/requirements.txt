@@ -1,0 +1,36 @@
+{
+  "name": "rizz-ai-platform",
+  "version": "1.0.0",
+  "description": "Enterprise AI/ML Platform with Model Serving",
+  "main": "src/api/index.py",
+  "scripts": {
+    "start": "uvicorn src.api.index:app --host 0.0.0.0 --port 5004",
+    "dev": "uvicorn src.api.index:app --reload --host 0.0.0.0 --port 5004",
+    "train": "python src/workers/trainer.py",
+    "inference": "python src/workers/inference.py"
+  },
+  "dependencies": {
+    "fastapi": "^0.106.0",
+    "uvicorn": "^0.25.0",
+    "pydantic": "^2.5.3",
+    "python-multipart": "^0.0.6",
+    "python-jose": "^3.3.0",
+    "passlib": "^1.7.4",
+    "bcrypt": "^4.1.2",
+    "pymongo": "^4.6.1",
+    "redis": "^5.0.1",
+    "celery": "^5.3.4",
+    "scikit-learn": "^1.3.2",
+    "pandas": "^2.1.4",
+    "numpy": "^1.26.2",
+    "torch": "^2.1.2",
+    "transformers": "^4.36.2",
+    "pillow": "^10.1.0",
+    "opencv-python": "^4.8.1",
+    "httpx": "^0.26.0",
+    "python-dotenv": "^1.0.0",
+    "loguru": "^0.7.2"
+  },
+  "author": "username9999",
+  "license": "MIT"
+}

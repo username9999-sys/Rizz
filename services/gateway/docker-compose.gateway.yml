@@ -1,0 +1,34 @@
+# API Gateway - Kong Configuration
+kong:
+  image: kong:3.4
+  container_name: rizz-gateway
+  environment:
+    KONG_DATABASE: "off"
+    KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+    KONG_PROXY_ACCESS_LOG: /dev/stdout
+    KONG_ADMIN_ACCESS_LOG: /dev/stdout
+    KONG_PROXY_ERROR_LOG: /dev/stderr
+    KONG_ADMIN_ERROR_LOG: /dev/stderr
+    KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    KONG_PROXY_LISTEN: 0.0.0.0:8000
+    KONG_PLUGINS: bundled
+  ports:
+    - "8000:8000"  # Proxy
+    - "8001:8001"  # Admin API
+  volumes:
+    - ./gateway/kong.yml:/kong/declarative/kong.yml:ro
+  depends_on:
+    - api
+    - analytics
+    - notifications
+    - search
+    - storage
+    - ml-service
+  networks:
+    - rizz-network
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "kong", "health"]
+    interval: 10s
+    timeout: 10s
+    retries: 10
