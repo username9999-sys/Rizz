@@ -1,0 +1,31 @@
+{
+  "name": "rizz-discord-bot",
+  "version": "1.0.0",
+  "description": "Rizz Project Discord Bot - Task management, notifications, and community features",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.5",
+    "mongoose": "^8.0.3",
+    "node-cron": "^3.0.3",
+    "winston": "^3.11.0",
+    "canvas": "^2.11.2",
+    "@discordjs/rest": "^2.2.0",
+    "discord-api-types": "^0.37.67"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "username9999",
+  "license": "MIT"
+}

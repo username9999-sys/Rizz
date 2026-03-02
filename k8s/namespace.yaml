@@ -1,0 +1,9 @@
+---
+# Namespace for Rizz Platform
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rizz-platform
+  labels:
+    name: rizz-platform
+    environment: production

@@ -1,0 +1,21 @@
+---
+# ConfigMap for API Server
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rizz-api-config
+  namespace: rizz-platform
+data:
+  FLASK_ENV: "production"
+  FLASK_DEBUG: "false"
+  PORT: "5000"
+  LOG_LEVEL: "INFO"
+  POSTS_PER_PAGE: "20"
+  COMMENTS_PER_PAGE: "50"
+  CORS_ORIGINS: "https://yourdomain.com,https://www.yourdomain.com"
+  JWT_ALGORITHM: "HS256"
+  JWT_ACCESS_TOKEN_EXPIRES_HOURS: "1"
+  JWT_REFRESH_TOKEN_EXPIRES_DAYS: "30"
+  DB_POOL_SIZE: "10"
+  DB_POOL_RECYCLE: "3600"
+  RATELIMIT_DEFAULT: "100 per hour"

@@ -1,0 +1,18 @@
+---
+# API Server Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: rizz-api
+  namespace: rizz-platform
+  labels:
+    app: rizz-api
+spec:
+  type: ClusterIP
+  selector:
+    app: rizz-api
+  ports:
+    - port: 5000
+      targetPort: 5000
+      protocol: TCP
+      name: http
