@@ -1,24 +1,30 @@
-# Dependencies
-node_modules/
+# Python
 __pycache__/
-*.pyc
-
-# Environment
-.env
-.env.local
+*.py[cod]
+*$py.class
+*.so
+.Python
 venv/
-
-# Build output
+env/
+ENV/
+.venv
+*.egg-info/
 dist/
 build/
-*.o
-*.so
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+.rizz_tasks.db
+.rizz_api.db
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -26,4 +32,14 @@ Thumbs.db
 
 # Logs
 *.log
-logs/
+
+# Environment
+.env
+.env.local
+
+# Manifest
+organize_manifest.json
+
+# Node (if added later)
+node_modules/
+package-lock.json

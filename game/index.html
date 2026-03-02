@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐍 Snake Game - Rizz Project</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <h1>🐍 Snake Game</h1>
+            <div class="score-board">
+                <div class="score-item">
+                    <span class="score-label">Score</span>
+                    <span id="score" class="score-value">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">High Score</span>
+                    <span id="highScore" class="score-value">0</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="game-area">
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            
+            <div id="startScreen" class="overlay">
+                <div class="overlay-content">
+                    <h2>🐍 Snake Game</h2>
+                    <p>Use arrow keys or WASD to move</p>
+                    <p>Eat food to grow and score points!</p>
+                    <button id="startBtn" class="btn btn-primary">Start Game</button>
+                </div>
+            </div>
+
+            <div id="gameOverScreen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2>💀 Game Over!</h2>
+                    <p>Your Score: <span id="finalScore">0</span></p>
+                    <button id="restartBtn" class="btn btn-primary">Play Again</button>
+                </div>
+            </div>
+
+            <div id="pauseScreen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2>⏸️ Paused</h2>
+                    <p>Press SPACE or P to resume</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-info">
+                <span class="key">↑</span>
+                <span class="key">↓</span>
+                <span class="key">←</span>
+                <span class="key">→</span>
+                <span class="key-label">or WASD</span>
+            </div>
+            <div class="control-info">
+                <span class="key">SPACE</span>
+                <span class="key-label">Pause</span>
+            </div>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div class="mobile-controls">
+            <button id="upBtn" class="mobile-btn">▲</button>
+            <div class="mobile-row">
+                <button id="leftBtn" class="mobile-btn">◀</button>
+                <button id="downBtn" class="mobile-btn">▼</button>
+                <button id="rightBtn" class="mobile-btn">▶</button>
+            </div>
+        </div>
+
+        <footer class="game-footer">
+            <p>Built with ❤️ by username9999</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

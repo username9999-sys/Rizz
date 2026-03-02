@@ -1,0 +1,10 @@
+# Global requirements for all projects
+# Install all: pip install -r requirements.txt
+
+# CLI Tool
+click>=8.0.0
+
+# API Server
+Flask>=2.0.0
+Flask-CORS>=3.0.0
+PyJWT>=2.0.0

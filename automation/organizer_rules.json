@@ -1,0 +1,22 @@
+{
+  "name": "Rizz File Organizer Rules",
+  "description": "Custom rules for organizing files",
+  "extensions": {
+    "projects": [".py", ".js", ".ts", ".java", ".cpp", ".c"],
+    "design": [".psd", ".ai", ".fig", ".sketch", ".xd"],
+    "music": [".mp3", ".flac", ".wav", ".aac", ".ogg"],
+    "photos": [".jpg", ".jpeg", ".png", ".raw", ".heic"],
+    "screenshots": [".png", ".jpg", ".gif"]
+  },
+  "patterns": {
+    "invoices": ["invoice", "receipt", "bill", "payment"],
+    "contracts": ["contract", "agreement", "nda", "terms"],
+    "reports": ["report", "summary", "analysis", "review"],
+    "backup": ["backup", "bak", "old", "archive"]
+  },
+  "size_rules": {
+    "large_files": {"min": 104857600},
+    "small_files": {"max": 102400}
+  },
+  "default": "misc"
+}
