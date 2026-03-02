@@ -263,7 +263,7 @@ def create_app(config_name=None):
                 }
             },
             'documentation': 'https://github.com/username9999-sys/Rizz',
-            'support': 'faridalfarizi179@gmail.com'
+            'support': 'contact@rizz.dev'
         })
     
     @app.route('/api/v2/stats', methods=['GET'])

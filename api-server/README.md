@@ -317,7 +317,7 @@ MIT License - username9999
 
 **username9999**
 - GitHub: [@username9999-sys](https://github.com/username9999-sys)
-- Email: faridalfarizi179@gmail.com
+- Email: contact@rizz.dev
 
 ---
 
