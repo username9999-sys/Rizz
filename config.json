@@ -1,0 +1,11 @@
+{
+  "name": "Rizz-Project",
+  "version": "1.0.0",
+  "description": "A sample project configuration",
+  "author": "username9999",
+  "settings": {
+    "debug": true,
+    "port": 8080,
+    "environment": "development"
+  }
+}
