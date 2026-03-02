@@ -1,0 +1,99 @@
+name: Code Quality (Linting)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-python:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+    
+    - name: Run Flake8
+      working-directory: ./api-server
+      run: |
+        flake8 app --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 app --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    
+    - name: Run Black (check only)
+      working-directory: ./api-server
+      run: |
+        black --check app/
+    
+    - name: Run isort (check only)
+      working-directory: ./api-server
+      run: |
+        isort --check-only app/
+  
+  lint-javascript:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        if [ -f "package.json" ]; then
+          npm ci
+        fi
+        if [ -f "web-app/package.json" ]; then
+          cd web-app && npm ci
+        fi
+    
+    - name: Run ESLint
+      run: |
+        if [ -f ".eslintrc.json" ]; then
+          npx eslint . --ext .js,.jsx
+        else
+          echo "No ESLint config found, skipping..."
+        fi
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install safety
+      run: pip install safety
+    
+    - name: Check dependencies for vulnerabilities
+      working-directory: ./api-server
+      run: |
+        safety check -r requirements.txt --output text || true
+    
+    - name: Run Bandit (security linter)
+      run: |
+        pip install bandit
+        bandit -r api-server/app -f json -o bandit-report.json || true
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-report
+        path: bandit-report.json
