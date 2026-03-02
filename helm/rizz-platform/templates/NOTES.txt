@@ -1,0 +1,38 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }} in the {{ .Release.Namespace }} namespace.
+
+{{- if .Values.ingress.enabled }}
+🌐 Access your API at:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else }}
+📡 Access your API locally:
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "rizz-platform.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 5000:5000
+  Then visit http://localhost:5000
+{{- end }}
+
+📊 API Endpoints:
+  - Health Check: /health
+  - API Info: /api
+  - Metrics: /metrics
+  - Auth: /api/auth/login
+  - Posts: /api/posts
+
+🔑 Default Credentials:
+  Username: admin
+  Password: admin123
+
+⚠️  IMPORTANT: Change the default credentials immediately!
+
+📚 Documentation: https://github.com/username9999-sys/Rizz
+
+{{- if .Values.api.autoscaling.enabled }}
+📈 Horizontal Pod Autoscaler is enabled ({{ .Values.api.autoscaling.minReplicas }}-{{ .Values.api.autoscaling.maxReplicas }} replicas)
+{{- end }}
+
+{{- if .Values.monitoring.enabled }}
+📊 Monitoring is enabled with Prometheus metrics
+{{- end }}

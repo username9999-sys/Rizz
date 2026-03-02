@@ -1,0 +1,37 @@
+---
+# Service Account for API Server
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rizz-api-sa
+  namespace: rizz-platform
+  labels:
+    app: rizz-api
+
+---
+# Role for API Server (minimal permissions)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rizz-api-role
+  namespace: rizz-platform
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list"]
+
+---
+# Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rizz-api-rolebinding
+  namespace: rizz-platform
+subjects:
+  - kind: ServiceAccount
+    name: rizz-api-sa
+    namespace: rizz-platform
+roleRef:
+  kind: Role
+  name: rizz-api-role
+  apiGroup: rbac.authorization.k8s.io

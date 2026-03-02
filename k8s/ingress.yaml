@@ -1,0 +1,30 @@
+---
+# Ingress for API Server
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rizz-api-ingress
+  namespace: rizz-platform
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "16m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  tls:
+    - hosts:
+        - api.yourdomain.com
+      secretName: rizz-api-tls
+  rules:
+    - host: api.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rizz-api
+                port:
+                  number: 5000

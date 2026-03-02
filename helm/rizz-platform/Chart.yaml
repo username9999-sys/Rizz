@@ -1,0 +1,17 @@
+apiVersion: v2
+name: rizz-platform
+description: A Helm chart for Rizz Platform - Enterprise-scale full-stack platform
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+keywords:
+  - flask
+  - postgresql
+  - redis
+  - api
+  - microservices
+maintainers:
+  - name: username9999
+    email: faridalfarizi179@gmail.com
+sources:
+  - https://github.com/username9999-sys/Rizz
