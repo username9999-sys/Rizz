@@ -66,7 +66,7 @@ services:
       MONGODB_URI: mongodb://mongo:27017/portfolio
       JWT_SECRET: ${JWT_SECRET:-portfolio-secret}
       ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: admin123
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-CHANGE_ME_GENERATE_STRONG_PASSWORD}
     depends_on:
       - mongo
     volumes:
@@ -79,7 +79,7 @@ services:
     container_name: rizz-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: mongo_user
-      MONGO_INITDB_ROOT_PASSWORD: mongo_password
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-CHANGE_ME_GENERATE_STRONG_PASSWORD}
     volumes:
       - mongo_data:/data/db
     ports:

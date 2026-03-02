@@ -5,6 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
+[![Tests](https://github.com/username9999-sys/Rizz/actions/workflows/test.yml/badge.svg)](https://github.com/username9999-sys/Rizz/actions/workflows/test.yml)
+[![Code Quality](https://github.com/username9999-sys/Rizz/actions/workflows/lint.yml/badge.svg)](https://github.com/username9999-sys/Rizz/actions/workflows/lint.yml)
 
 > **⚠️ READ THIS**: This is a **learning project** and **portfolio showcase**. **NOT production-ready**. Requires security audit and testing before production use.
 
