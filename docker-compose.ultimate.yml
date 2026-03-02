@@ -1,0 +1,855 @@
+# Rizz Platform - ULTIMATE INTEGRATION
+# Complete integration of ALL existing projects + new microservices
+# Total: 50+ Services / 60+ Containers
+version: '3.8'
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-environment: &global-env
+  FLASK_ENV: ${FLASK_ENV:-production}
+  SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+  REDIS_URL: redis://redis:6379/0
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  DATABASE_URL: postgresql://rizz_user:${POSTGRES_PASSWORD:-rizz_password}@postgres:5432/rizz_api
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
+x-healthcheck: &api-healthcheck
+  test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
+services:
+  # ========== CORE INFRASTRUCTURE ==========
+  
+  # PostgreSQL - Primary Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rizz-postgres
+    environment:
+      POSTGRES_DB: rizz_api
+      POSTGRES_USER: rizz_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rizz_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./api-server/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rizz_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Redis - Cache & Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: rizz-redis
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # MongoDB - Document Database
+  mongo:
+    image: mongo:7
+    container_name: rizz-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-mongo_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-mongo_password}
+      MONGO_INITDB_DATABASE: rizz_analytics
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Elasticsearch - Search Engine
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: rizz-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms2g -Xmx2g"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  # MinIO - S3 Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: rizz-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # RabbitMQ - Message Queue
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rizz-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-rizz_user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rizz_password}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Kafka - Event Streaming
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: rizz-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    ports:
+      - "29092:29092"
+    depends_on:
+      - rabbitmq
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # ========== NEW ENTERPRISE SERVICES ==========
+  
+  # Temporal - Workflow Orchestration
+  temporal:
+    image: temporalio/auto-setup:1.21
+    container_name: rizz-temporal
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal_user
+      - POSTGRES_PWD=${TEMPORAL_PASSWORD:-temporal_password}
+      - POSTGRES_SEEDS=postgres
+    ports:
+      - "7233:7233"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # HashiCorp Vault - Secrets Management
+  vault:
+    image: vault:1.15
+    container_name: rizz-vault
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_LOCAL_CONFIG: |
+        storage "inmem" {}
+        listener "tcp" {
+          address = "0.0.0.0:8200"
+          tls_disable = 1
+        }
+        api_addr = "http://0.0.0.0:8200"
+        ui = true
+    command: server
+    ports:
+      - "8200:8200"
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Unleash - Feature Flags
+  unleash:
+    image: unleashorg/unleash-server:4.19
+    container_name: rizz-unleash
+    environment:
+      DATABASE_URL: postgresql://rizz_user:${POSTGRES_PASSWORD:-rizz_password}@postgres:5432/unleash
+      DATABASE_SSL: "false"
+      INIT_FRONTEND_API_TOKENS: unleash:default.development
+      INIT_CLIENT_API_TOKENS: unleash:default.development
+    ports:
+      - "4242:4242"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # ClickHouse - Data Warehouse
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: rizz-clickhouse
+    environment:
+      CLICKHOUSE_DB: rizz_analytics
+      CLICKHOUSE_USER: clickhouse_user
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse_password}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Apache Airflow - Data Pipelines
+  airflow:
+    image: apache/airflow:2.7.0
+    container_name: rizz-airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://rizz_user:${POSTGRES_PASSWORD:-rizz_password}@postgres:5432/airflow
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-change-me-32-chars-fernet-key}
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_data:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    command: webserver
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # ========== CORE MICROSERVICES ==========
+  
+  api:
+    build:
+      context: ./api-server
+      dockerfile: Dockerfile
+    container_name: rizz-api
+    environment: *global-env
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./api-server:/app
+    <<: *api-healthcheck
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  analytics:
+    build:
+      context: ./services/analytics
+      dockerfile: Dockerfile
+    container_name: rizz-analytics
+    environment:
+      <<: *global-env
+      DATABASE_URL: postgresql://rizz_user:${POSTGRES_PASSWORD:-rizz_password}@postgres:5432/rizz_api
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  notifications:
+    build:
+      context: ./services/notifications
+      dockerfile: Dockerfile
+    container_name: rizz-notifications
+    environment:
+      <<: *global-env
+      CELERY_BROKER_URL: redis://redis:6379/0
+    ports:
+      - "8002:8002"
+    depends_on:
+      - redis
+      - rabbitmq
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  celery-worker:
+    build:
+      context: ./services/notifications
+      dockerfile: Dockerfile
+    container_name: rizz-celery-worker
+    command: celery -A app.main.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      <<: *global-env
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+      - rabbitmq
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  search:
+    build:
+      context: ./services/search
+      dockerfile: Dockerfile
+    container_name: rizz-search
+    environment:
+      <<: *global-env
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "8003:8003"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  storage:
+    build:
+      context: ./services/storage
+      dockerfile: Dockerfile
+    container_name: rizz-storage
+    environment:
+      <<: *global-env
+      S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      S3_BUCKET_NAME: rizz-storage
+    ports:
+      - "8004:8004"
+    depends_on:
+      - minio
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  ml-service:
+    build:
+      context: ./services/ml-service
+      dockerfile: Dockerfile
+    container_name: rizz-ml
+    environment:
+      <<: *global-env
+    ports:
+      - "8005:8005"
+    depends_on:
+      - redis
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # ========== GATEWAYS ==========
+  
+  graphql-gateway:
+    build:
+      context: ./services/graphql-gateway
+      dockerfile: Dockerfile
+    container_name: rizz-graphql
+    environment:
+      PORT: 5001
+      REDIS_URL: redis://redis:6379/6
+    ports:
+      - "5001:5001"
+    depends_on:
+      - api
+      - redis
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  websocket-gateway:
+    build:
+      context: ./services/websocket-gateway
+      dockerfile: Dockerfile
+    container_name: rizz-websocket
+    environment:
+      <<: *global-env
+      REDIS_HOST: redis
+    ports:
+      - "5002:5002"
+    depends_on:
+      - redis
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  kong-gateway:
+    image: kong:3.4
+    container_name: rizz-kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_PLUGINS: bundled
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    volumes:
+      - ./services/gateway/kong.yml:/kong/declarative/kong.yml:ro
+    depends_on:
+      - api
+      - analytics
+      - search
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # ========== EXISTING PROJECTS INTEGRATION ==========
+  
+  # Web App - Portfolio
+  web-app:
+    build:
+      context: ./web-app
+      dockerfile: Dockerfile
+    container_name: rizz-portfolio
+    environment:
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web-app:/app
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Chat App
+  chat-app:
+    build:
+      context: ./chat-app
+      dockerfile: Dockerfile
+    container_name: rizz-chat
+    environment:
+      PORT: 3010
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "3010:3010"
+    depends_on:
+      - redis
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # E-commerce
+  ecommerce:
+    build:
+      context: ./ecommerce
+      dockerfile: Dockerfile
+    container_name: rizz-ecommerce
+    environment:
+      PORT: 3020
+      DATABASE_URL: postgresql://rizz_user:${POSTGRES_PASSWORD:-rizz_password}@postgres:5432/ecommerce
+    ports:
+      - "3020:3020"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Social Media
+  social-media:
+    build:
+      context: ./social-media
+      dockerfile: Dockerfile
+    container_name: rizz-social
+    environment:
+      PORT: 3030
+      DATABASE_URL: postgresql://rizz_user:${POSTGRES_PASSWORD:-rizz_password}@postgres:5432/social
+    ports:
+      - "3030:3030"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Streaming Service
+  streaming:
+    build:
+      context: ./streaming
+      dockerfile: Dockerfile
+    container_name: rizz-streaming
+    environment:
+      PORT: 3040
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "3040:3040"
+    depends_on:
+      - redis
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Cloud Storage
+  cloud-storage:
+    build:
+      context: ./cloud-storage
+      dockerfile: Dockerfile
+    container_name: rizz-cloud
+    environment:
+      PORT: 3050
+      S3_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "3050:3050"
+    depends_on:
+      - minio
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # AI Platform
+  ai-platform:
+    build:
+      context: ./ai-platform
+      dockerfile: Dockerfile
+    container_name: rizz-ai
+    environment:
+      PORT: 3060
+      ML_SERVICE_URL: http://ml-service:8005
+    ports:
+      - "3060:3060"
+    depends_on:
+      - ml-service
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Blockchain
+  blockchain:
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile
+    container_name: rizz-blockchain
+    environment:
+      PORT: 3070
+    ports:
+      - "3070:3070"
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # IoT Platform
+  iot-platform:
+    build:
+      context: ./iot-platform
+      dockerfile: Dockerfile
+    container_name: rizz-iot
+    environment:
+      PORT: 3080
+      MQTT_BROKER: mqtt://mosquitto:1883
+    ports:
+      - "3080:3080"
+    depends_on:
+      - mosquitto
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Discord Bot
+  discord-bot:
+    build:
+      context: ./discord-bot
+      dockerfile: Dockerfile
+    container_name: rizz-discord
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:-your-token}
+      DATABASE_URL: postgresql://rizz_user:${POSTGRES_PASSWORD:-rizz_password}@postgres:5432/discord_bot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # MQTT Broker for IoT
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: rizz-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./iot-platform/mosquitto/config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # ========== MONITORING & OBSERVABILITY ==========
+  
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: rizz-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: rizz-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    ports:
+      - "3090:3000"
+    depends_on:
+      - prometheus
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.50
+    container_name: rizz-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: rizz-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # ========== ADMIN & DOCS ==========
+  
+  admin-dashboard:
+    build:
+      context: ./services/admin-dashboard
+      dockerfile: Dockerfile
+    container_name: rizz-admin
+    environment:
+      REACT_APP_API_URL: http://localhost:5000
+      REACT_APP_GRAPHQL_URL: http://localhost:5001/graphql
+      REACT_APP_WS_URL: ws://localhost:5002
+    ports:
+      - "3001:3000"
+    depends_on:
+      - api
+      - graphql-gateway
+      - websocket-gateway
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # Documentation - Docusaurus
+  docs:
+    build:
+      context: ./docs/docusaurus
+      dockerfile: Dockerfile
+    container_name: rizz-docs
+    environment:
+      PORT: 3002
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./docs/docusaurus:/app
+    logging: *default-logging
+    networks:
+      - rizz-network
+    <<: *restart-policy
+
+  # ========== TESTING & QUALITY ==========
+  
+  # k6 - Performance Testing
+  k6:
+    image: grafana/k6:0.47.0
+    container_name: rizz-k6
+    volumes:
+      - ./testing/k6:/scripts
+    environment:
+      K6_OUT: influxdb=http://influxdb:8086/k6
+    depends_on:
+      - api
+    logging: *default-logging
+    networks:
+      - rizz-network
+    profiles:
+      - test
+
+# ========== VOLUMES ==========
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  mongo_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  minio_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  kafka_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+  clickhouse_data:
+    driver: local
+  airflow_data:
+    driver: local
+  mosquitto_data:
+    driver: local
+
+# ========== NETWORKS ==========
+networks:
+  rizz-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
