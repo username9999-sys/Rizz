@@ -1,16 +1,21 @@
-import os
-import shutil
-
-def organize_files(directory):
-    for filename in os.listdir(directory):
-        if os.path.isfile(os.path.join(directory, filename)):
-            ext = filename.split('.')[-1].lower()
-            folder = os.path.join(directory, ext.upper() + '_Files')
-            if not os.path.exists(folder):
-                os.makedirs(folder)
-            shutil.move(os.path.join(directory, filename), os.path.join(folder, filename))
-            print(f'Moved: {filename} -> {folder}')
-
+import os, shutil
+EXTS = {'IMAGES': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'], 'DOCS': ['.pdf', '.docx', '.txt', '.xlsx', '.pptx', '.csv'], 'SCRIPTS': ['.sh', '.py', '.js', '.lua', '.html', '.css'], 'ARCHIVES': ['.zip', '.tar', '.gz', '.rar', '.7z'], 'ANDROID': ['.apk', '.dex', '.so']}
+def organize(dir):
+    if not os.path.exists(dir): return
+    count = 0
+    for f in os.listdir(dir):
+        p = os.path.join(dir, f)
+        if os.path.isfile(p) and not f.startswith('.'):
+            ext = os.path.splitext(f)[1].lower(); cat = 'OTHERS'
+            for c, exts in EXTS.items():
+                if ext in exts: cat = c; break
+            dest = os.path.join(dir, cat)
+            if not os.path.exists(dest): os.makedirs(dest)
+            shutil.move(p, os.path.join(dest, f)); print(f'[✓] Moved: {f} -> {cat}/'); count += 1
+    print(f'
+--- Summary ---
+Organized {count} files.')
 if __name__ == '__main__':
-    path = input('Enter directory path to organize: ') or '.'
-    organize_files(path)
+    print('--- SMART FILE ORGANIZER ---')
+    path = input('Enter directory path (leave blank for current): ').strip() or '.'
+    organize(path)
