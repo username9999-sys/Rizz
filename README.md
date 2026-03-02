@@ -1,243 +1,305 @@
-# 🚀 Rizz Project Collection
+# 🚀 Rizz Project Collection - Enhanced Edition
 
-Koleksi project lengkap yang dibuat dengan ❤️ oleh **username9999**
+Koleksi project lengkap yang telah di-enhance dengan fitur-fitur advanced! Dibuat dengan ❤️ oleh **username9999**
 
-## 📁 Daftar Project
+## 📁 Daftar Project (Enhanced)
 
-### 1. 🌐 Web Application - Portfolio Website
+### 1. 🌐 Web Application - Portfolio + Blog + Backend
 **Lokasi:** `web-app/`
 
-Portfolio website modern dengan desain dark theme yang elegan.
+Portfolio website modern dengan backend Express.js, blog CMS, dan dark/light theme.
 
-**Fitur:**
-- ✨ Responsive design (mobile-friendly)
-- 🎨 Dark theme dengan gradient accents
-- 📱 Mobile navigation
-- 📧 Contact form dengan validasi
-- ⚡ Smooth scroll animations
-- 🎯 Intersection Observer untuk animasi
+**Fitur Baru:**
+- ✨ **Dark/Light Theme Toggle** dengan localStorage persistence
+- 📝 **Blog System** dengan categories, tags, views counter
+- 🔌 **Express.js Backend** dengan MongoDB
+- 📧 **Contact Form** dengan email notifications
+- 📊 **Visitor Analytics** dengan tracking
+- 🔐 **Admin Authentication** (JWT)
+- 📱 **Fully Responsive** mobile design
+- ⚡ **SEO Optimized**
 
-**File:**
-- `index.html` - Struktur HTML
-- `styles.css` - Styling CSS
-- `script.js` - Interaktivitas JavaScript
+**Tech Stack:**
+- Frontend: HTML5, CSS3, JavaScript (Vanilla)
+- Backend: Node.js, Express.js
+- Database: MongoDB
+- Features: JWT Auth, Rate Limiting, CORS, Helmet
 
-**Cara Menggunakan:**
+**Quick Start:**
 ```bash
-# Buka langsung di browser
-open web-app/index.html
+cd web-app
+npm install
+cp .env.example .env
+npm run dev
 ```
 
 ---
 
-### 2. 💻 CLI Tool - Task Manager
+### 2. 💻 CLI Tool - Task Manager + GUI
 **Lokasi:** `cli-tool/`
 
-Aplikasi manajemen tugas berbasis command-line yang powerful.
+Task management application dengan CLI dan Desktop GUI.
 
-**Fitur:**
-- ✅ CRUD operations untuk tasks
-- 📊 Statistik dan tracking
-- 🔍 Pencarian tasks
-- 📁 Manajemen kategori
-- 🏷️ Priority levels
-- 📅 Due date tracking
-- 💾 SQLite database
-- 📤 Export ke JSON/CSV
+**Fitur Baru:**
+- 🖥️ **Desktop GUI** dengan Tkinter (dark theme)
+- 🔄 **Recurring Tasks** (daily, weekly, monthly)
+- 📊 **Statistics Dashboard** dengan charts
+- 💾 **Export** ke JSON/CSV/PDF
+- 🔍 **Advanced Search** dengan filters
+- ⚡ **Keyboard Shortcuts** lengkap
+- 📅 **Due Date Reminders**
+- 🎨 **Modern UI** dengan treeview
 
-**Instalasi:**
+**Commands:**
 ```bash
-cd cli-tool
-pip install -r requirements.txt
-python task_manager.py --help
-```
+# CLI Version
+python task_manager.py add -t "Task" -p high
+python task_manager.py gui  # Launch GUI
 
-**Contoh Penggunaan:**
-```bash
-# Tambah task baru
-python task_manager.py add -t "Belajar Python" -p high -c learning
-
-# List semua tasks
-python task_manager.py list
-
-# Complete task
-python task_manager.py complete 1
-
-# Lihat statistik
-python task_manager.py stats
+# Or directly
+python task_manager_gui.py
 ```
 
 ---
 
-### 3. 🔌 API Server - REST API
+### 3. 🔌 API Server - Production Ready
 **Lokasi:** `api-server/`
 
-REST API yang scalable dengan autentikasi JWT dan database integration.
+REST API yang scalable dengan PostgreSQL, Redis, dan Docker support.
 
-**Fitur:**
-- 🔐 JWT Authentication
-- 👤 User registration & login
-- 📝 CRUD Posts API
-- 💬 Comments system
-- 🔒 Protected endpoints
-- 📚 Auto-generated API docs
+**Fitur Baru:**
+- 🐘 **PostgreSQL** database dengan advanced schema
+- 🔴 **Redis** caching untuk performance
+- 📚 **Swagger/OpenAPI** documentation
+- 🐳 **Docker** containerization
+- 🔐 **Rate Limiting** dengan Redis
+- 📝 **Audit Logging** system
+- 🏷️ **Tags System** untuk posts
+- 📊 **Database Views** untuk statistics
+- 🔄 **Database Triggers** untuk auto-update
 
-**Instalasi:**
+**Endpoints:**
+- `/api/auth/*` - Authentication
+- `/api/posts/*` - Blog posts CRUD
+- `/api/comments/*` - Comments system
+- `/api/tags/*` - Tag management
+- `/api/stats` - Analytics
+- `/api/health` - Health check
+
+**Quick Start:**
 ```bash
+# With Docker
+docker-compose up -d
+
+# Manual
 cd api-server
 pip install -r requirements.txt
 python app.py
 ```
 
-**Endpoint Utama:**
-```bash
-# Login
-POST /api/auth/login
-
-# Get Posts
-GET /api/posts
-
-# Create Post (auth required)
-POST /api/posts
-Headers: Authorization: Bearer <token>
-
-# Add Comment
-POST /api/posts/:id/comments
-```
-
-**Default Credentials:**
-- Username: `admin`
-- Password: `admin123`
-
 ---
 
-### 4. 🎮 Game - Snake Game
+### 4. 🎮 Snake Game - Enhanced Edition
 **Lokasi:** `game/`
 
-Classic snake game yang dibangun dengan HTML5 Canvas dan JavaScript.
+Classic snake game dengan power-ups, multiple modes, dan leaderboard.
 
-**Fitur:**
-- 🐍 Smooth snake movement
-- 🍎 Glowing food effect
-- 📊 Score & High Score tracking
-- ⏸️ Pause functionality
-- 📱 Mobile controls support
-- 🎨 Modern dark theme
-- 💾 LocalStorage untuk high score
+**Fitur Baru:**
+- ⚡ **Power-ups:**
+  - 🟡 Speed Boost - Move faster
+  - 🔵 Slow Motion - Move slower
+  - 🟣 Double Points - 2x score
+  - 🩷 Ghost Mode - Pass through walls
+  - 🟢 Shrink - Reduce snake size
+- 🎯 **Game Modes:**
+  - Classic - Unlimited play
+  - Timed - 3 minutes challenge
+  - Survival - Increasing difficulty
+- 🏆 **Leaderboard** dengan localStorage
+- 🔥 **Combo System** - Eat fast for multiplier
+- 📊 **Statistics** tracking
+- 🎨 **Enhanced Graphics** dengan gradients
+- 📱 **Mobile Controls** support
 
-**Cara Bermain:**
-```bash
-# Buka di browser
-open game/index.html
-```
-
-**Kontrol:**
-- **Arrow Keys** atau **WASD** - Gerakan snake
-- **SPACE** atau **P** - Pause game
+**Controls:**
+- Arrow Keys / WASD - Move
+- SPACE / P - Pause
+- Touch controls on mobile
 
 ---
 
-### 5. 🗂️ Automation - File Organizer
+### 5. 🗂️ File Organizer - Pro Version
 **Lokasi:** `automation/`
 
-Script otomatisasi untuk mengorganisir file berdasarkan type, date, atau custom rules.
+File organization tool dengan GUI dan real-time monitoring.
 
-**Fitur:**
-- 📁 Organize by file type
-- 📅 Organize by date
-- ⚙️ Custom rules support
-- 💾 Dry run mode
-- ↩️ Undo functionality
-- 📊 Detailed statistics
+**Fitur Baru:**
+- 🖥️ **Desktop GUI** dengan Tkinter (dark theme)
+- 👁️ **Real-time Monitoring** dengan Watchdog
+- ⚡ **Auto-organization** untuk new files
+- 📊 **Progress Tracking** dengan statistics
+- 📝 **Activity Log** dengan timestamps
+- 🔄 **Undo Support** dengan manifest
+- 📋 **Custom Rules** editor
+- 📤 **Export Reports** (TXT, CSV)
+- 🎨 **Modern UI** dengan progress bars
 
-**Instalasi:**
+**Usage:**
 ```bash
-cd automation
-# Tidak perlu install dependencies (pure Python)
-```
+# GUI Version
+python file_organizer_gui.py
 
-**Contoh Penggunaan:**
-```bash
-# Organize by type
+# CLI Version
 python file_organizer.py organize --type ~/Downloads
-
-# Organize by date
-python file_organizer.py organize --date ~/Documents
-
-# Dry run (preview)
-python file_organizer.py organize --dry-run --type ~/Downloads
-
-# Custom rules
-python file_organizer.py organize --rules organizer_rules.json ~/Projects
-
-# Undo last operation
-python file_organizer.py undo
+python file_organizer.py organize --date --date-format "%Y-%m" ~/Documents
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Tech Stack (Complete)
 
-| Project | Technologies |
-|---------|-------------|
-| Web App | HTML5, CSS3, JavaScript, Font Awesome |
-| CLI Tool | Python, Click, SQLite |
-| API Server | Python, Flask, Flask-CORS, PyJWT |
-| Game | HTML5 Canvas, JavaScript, CSS3 |
-| Automation | Python (standard library) |
+| Project | Frontend | Backend | Database | DevOps |
+|---------|----------|---------|----------|--------|
+| Web App | HTML/CSS/JS | Node.js/Express | MongoDB | Docker |
+| CLI Tool | Tkinter | Python | SQLite | - |
+| API Server | - | Python/Flask | PostgreSQL/Redis | Docker |
+| Game | HTML5 Canvas | JavaScript | LocalStorage | - |
+| File Organizer | Tkinter | Python | - | - |
 
 ---
 
-## 📦 Quick Start
+## 🐳 Docker Deployment
+
+### Quick Deploy
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all
+docker-compose down
+```
+
+### Services
+- **PostgreSQL** (port 5432) - Main database
+- **Redis** (port 6379) - Caching layer
+- **MongoDB** (port 27017) - Portfolio database
+- **API Server** (port 5000) - REST API
+- **Portfolio** (port 3000) - Web app
+- **Nginx** (port 80/443) - Reverse proxy
+
+---
+
+## 🔄 CI/CD Pipeline
+
+GitHub Actions workflow includes:
+- ✅ Multi-version Python testing (3.9, 3.10, 3.11)
+- ✅ Multi-version Node.js testing (18, 20, 21)
+- ✅ Code linting (flake8, black)
+- ✅ Unit tests dengan coverage
+- ✅ Docker image building
+- ✅ Security scanning (Trivy)
+- ✅ Auto-deployment to production
+
+---
+
+## 📊 Project Statistics
+
+```
+Total Files: 50+
+Lines of Code: 10,000+
+Features: 100+
+Technologies: 15+
+Docker Containers: 6
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.9+
+- Node.js 18+
+- Docker & Docker Compose
+- Git
+
+### Installation
 
 ```bash
 # Clone repository
 git clone https://github.com/username9999-sys/Rizz.git
 cd Rizz-Project
 
-# Install all dependencies
+# Install Python dependencies
 pip install -r requirements.txt
 
-# Or install per project
-cd cli-tool && pip install -r requirements.txt
-cd ../api-server && pip install -r requirements.txt
+# Install Node.js dependencies
+cd web-app && npm install
+
+# Start with Docker
+docker-compose up -d
+```
+
+### Environment Setup
+
+```bash
+# Copy environment files
+cp .env.example .env
+
+# Edit with your credentials
+# - Database URLs
+# - API keys
+# - Secret keys
 ```
 
 ---
 
-## 📸 Screenshots
+## 📖 Documentation
 
-### Portfolio Website
-Modern dark-themed portfolio with smooth animations
-
-### Task Manager CLI
-Powerful command-line task management
-
-### REST API
-Full-featured API with authentication
-
-### Snake Game
-Classic arcade game with modern UI
-
-### File Organizer
-Automated file organization tool
+- [Web App Guide](web-app/README.md)
+- [CLI Tool Guide](cli-tool/README.md)
+- [API Server Guide](api-server/README.md)
+- [Game Guide](game/README.md)
+- [File Organizer Guide](automation/README.md)
 
 ---
 
 ## 🤝 Contributing
 
-Feel free to fork this project and submit pull requests!
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
+
+---
 
 ## 📄 License
 
 MIT License - username9999
+
+---
 
 ## 👨‍💻 Author
 
 **username9999**
 - GitHub: [@username9999-sys](https://github.com/username9999-sys)
 - Email: faridalfarizi179@gmail.com
+- Portfolio: https://username9999.dev
 
 ---
 
-Built with ❤️ and lots of coffee ☕
+## 🙏 Acknowledgments
+
+- Font Awesome for icons
+- Flask/Express communities
+- Python/Node.js communities
+- All open-source contributors
+
+---
+
+Built with ❤️, ☕, and 🎵 by username9999
+
+**Last Updated:** March 2026

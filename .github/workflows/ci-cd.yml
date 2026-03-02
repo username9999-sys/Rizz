@@ -1,0 +1,166 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # Test Python Projects
+  test-python:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+        project: [cli-tool, api-server, automation]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.project }}
+          pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest pytest-cov flake8 black
+      
+      - name: Lint with flake8
+        run: |
+          cd ${{ matrix.project }}
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      
+      - name: Format check with black
+        run: |
+          cd ${{ matrix.project }}
+          black --check . || true
+      
+      - name: Test with pytest
+        run: |
+          cd ${{ matrix.project }}
+          pytest --cov=. --cov-report=xml || true
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ${{ matrix.project }}/coverage.xml
+          flags: ${{ matrix.project }}
+
+  # Test Node.js Projects
+  test-node:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: ['18', '20', '21']
+        project: [web-app]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.project }}
+          npm ci
+      
+      - name: Lint
+        run: |
+          cd ${{ matrix.project }}
+          npm run lint || true
+      
+      - name: Test
+        run: |
+          cd ${{ matrix.project }}
+          npm test || true
+
+  # Build Docker Images
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: [test-python, test-node]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        if: github.event_name != 'pull_request'
+      
+      - name: Build API Server
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api-server
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/rizz-api:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rizz-api:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rizz-api:buildcache,mode=max
+      
+      - name: Build Portfolio
+        uses: docker/build-push-action@v5
+        with:
+          context: ./web-app
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/rizz-portfolio:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rizz-portfolio:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rizz-portfolio:buildcache,mode=max
+
+  # Deploy to Production
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /opt/rizz-project
+            git pull origin main
+            docker-compose pull
+            docker-compose up -d
+            docker system prune -af
+
+  # Security Scan
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
