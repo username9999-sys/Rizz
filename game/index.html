@@ -1,84 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🐍 Snake Game - Rizz Project</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
+<html>
+<head><title>Snake Game</title><style>body{background:#000;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;color:#fff;font-family:sans-serif}canvas{border:2px solid #fff;box-shadow:0 0 20px #0f0}</style></head>
 <body>
-    <div class="game-container">
-        <header class="game-header">
-            <h1>🐍 Snake Game</h1>
-            <div class="score-board">
-                <div class="score-item">
-                    <span class="score-label">Score</span>
-                    <span id="score" class="score-value">0</span>
-                </div>
-                <div class="score-item">
-                    <span class="score-label">High Score</span>
-                    <span id="highScore" class="score-value">0</span>
-                </div>
-            </div>
-        </header>
-
-        <div class="game-area">
-            <canvas id="gameCanvas" width="400" height="400"></canvas>
-            
-            <div id="startScreen" class="overlay">
-                <div class="overlay-content">
-                    <h2>🐍 Snake Game</h2>
-                    <p>Use arrow keys or WASD to move</p>
-                    <p>Eat food to grow and score points!</p>
-                    <button id="startBtn" class="btn btn-primary">Start Game</button>
-                </div>
-            </div>
-
-            <div id="gameOverScreen" class="overlay hidden">
-                <div class="overlay-content">
-                    <h2>💀 Game Over!</h2>
-                    <p>Your Score: <span id="finalScore">0</span></p>
-                    <button id="restartBtn" class="btn btn-primary">Play Again</button>
-                </div>
-            </div>
-
-            <div id="pauseScreen" class="overlay hidden">
-                <div class="overlay-content">
-                    <h2>⏸️ Paused</h2>
-                    <p>Press SPACE or P to resume</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="controls">
-            <div class="control-info">
-                <span class="key">↑</span>
-                <span class="key">↓</span>
-                <span class="key">←</span>
-                <span class="key">→</span>
-                <span class="key-label">or WASD</span>
-            </div>
-            <div class="control-info">
-                <span class="key">SPACE</span>
-                <span class="key-label">Pause</span>
-            </div>
-        </div>
-
-        <!-- Mobile Controls -->
-        <div class="mobile-controls">
-            <button id="upBtn" class="mobile-btn">▲</button>
-            <div class="mobile-row">
-                <button id="leftBtn" class="mobile-btn">◀</button>
-                <button id="downBtn" class="mobile-btn">▼</button>
-                <button id="rightBtn" class="mobile-btn">▶</button>
-            </div>
-        </div>
-
-        <footer class="game-footer">
-            <p>Built with ❤️ by username9999</p>
-        </footer>
-    </div>
-
-    <script src="game.js"></script>
-</body>
-</html>
+<div><h2>Score: <span id="score">0</span></h2><canvas id="game" width="400" height="400"></canvas></div>
+<script>
+const cvs=document.getElementById("game"),ctx=cvs.getContext("2d");
+const box=20; let snake=[{x:9*box,y:10*box}]; let food={x:Math.floor(Math.random()*19+1)*box,y:Math.floor(Math.random()*19+1)*box};
+let score=0; let d; document.addEventListener("keydown",dir);
+function dir(event){if(event.keyCode==37&&d!="RIGHT")d="LEFT";else if(event.keyCode==38&&d!="DOWN")d="UP";else if(event.keyCode==39&&d!="LEFT")d="RIGHT";else if(event.keyCode==40&&d!="UP")d="DOWN";}
+function draw(){ctx.fillStyle="#000";ctx.fillRect(0,0,400,400);for(let i=0;i<snake.length;i++){ctx.fillStyle=(i==0)?"#0f0":"#fff";ctx.fillRect(snake[i].x,snake[i].y,box,box);}
+ctx.fillStyle="red";ctx.fillRect(food.x,food.y,box,box);let snakeX=snake[0].x;let snakeY=snake[0].y;
+if(d=="LEFT")snakeX-=box;if(d=="UP")snakeY-=box;if(d=="RIGHT")snakeX+=box;if(d=="DOWN")snakeY+=box;
+if(snakeX==food.x&&snakeY==food.y){score++;document.getElementById("score").innerText=score;food={x:Math.floor(Math.random()*19+1)*box,y:Math.floor(Math.random()*19+1)*box}}else{snake.pop()}
+let newHead={x:snakeX,y:snakeY};if(snakeX<0||snakeX>380||snakeY<0||snakeY>380||collision(newHead,snake)){clearInterval(game);alert("Game Over! Score: "+score);location.reload()}snake.unshift(newHead)}
+function collision(head,array){for(let i=0;i<array.length;i++){if(head.x==array[i].x&&head.y==array[i].y)return true}return false}
+let game=setInterval(draw,100);
+</script></body></html>
