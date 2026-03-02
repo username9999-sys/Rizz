@@ -1,0 +1,26 @@
+# System Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+.venv/
+venv/
+
+# Logs
+*.log
+
+# Android/Termux specific
+.android/
+.cache/
+.npm/
