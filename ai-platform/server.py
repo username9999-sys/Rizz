@@ -24,7 +24,7 @@ from PIL import Image
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 import numpy as np
 import pandas as pd
-import scikit-learn as sklearn
+import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import KMeans
