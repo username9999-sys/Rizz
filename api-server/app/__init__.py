@@ -113,7 +113,12 @@ def after_request(response):
         # Add headers
         response.headers['X-Request-ID'] = g.request_id
         response.headers['X-Response-Time'] = f'{elapsed*1000:.2f}ms'
-        
+        # Security headers
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+
         # Log request
         app.logger.info(f'{request.method} {request.path} {status} {elapsed*1000:.2f}ms')
     

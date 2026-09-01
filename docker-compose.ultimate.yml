@@ -100,15 +100,17 @@ services:
     container_name: rizz-elasticsearch
     environment:
       discovery.type: single-node
-      xpack.security.enabled: "false"
+      xpack.security.enabled: "true"
       ES_JAVA_OPTS: "-Xms2g -Xmx2g"
+      # Note: For production, you need to set passwords for built-in users
+      # E.g., ELASTIC_PASSWORD: your-password-here
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
       - "9300:9300"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f --user elastic:${ELASTIC_PASSWORD:-changeme} http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -215,6 +217,12 @@ services:
     <<: *restart-policy
 
   # HashiCorp Vault - Secrets Management
+  # ⚠️ WARNING: This is a DEVELOPMENT ONLY configuration!
+  # For production, you MUST:
+  # 1. Change storage from "inmem" to a persistent backend (file, consul, etc.)
+  # 2. Enable TLS by setting tls_disable = 0 and providing certificates
+  # 3. Configure proper authentication methods and policies
+  # 4. Consider using a dedicated Vault operator and production hardening guide
   vault:
     image: vault:1.15
     container_name: rizz-vault
@@ -222,7 +230,11 @@ services:
       - IPC_LOCK
     environment:
       VAULT_LOCAL_CONFIG: |
+        # DEV MODE: In-memory storage (NOT persistent - data lost on restart)
+        # PRODUCTION: Use file, consul, raft, or other persistent storage
         storage "inmem" {}
+        # DEV MODE: TLS disabled (NOT secure for production)
+        # PRODUCTION: Enable TLS and provide proper certificates
         listener "tcp" {
           address = "0.0.0.0:8200"
           tls_disable = 1

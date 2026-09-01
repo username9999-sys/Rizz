@@ -37,6 +37,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   redis:
     image: redis:7-alpine
@@ -55,21 +60,28 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
     container_name: rizz-elasticsearch
     environment:
       discovery.type: single-node
-      xpack.security.enabled: "false"
+      xpack.security.enabled: "true"
       ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+      # Note: For production, you need to set passwords for built-in users
+      # E.g., ELASTIC_PASSWORD: your-password-here
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
       - "9300:9300"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f --user elastic:${ELASTIC_PASSWORD:-changeme} http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -82,6 +94,11 @@ services:
       memlock:
         soft: -1
         hard: -1
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
 
   minio:
     image: minio/minio:latest
@@ -104,6 +121,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   rabbitmq:
     image: rabbitmq:3.12-management
@@ -125,6 +147,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -194,6 +221,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   notifications:
     build:
@@ -212,6 +244,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   celery-worker:
     build:
@@ -225,10 +262,16 @@ services:
     depends_on:
       - redis
       - rabbitmq
+      - notifications
     logging: *default-logging
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   search:
     build:
@@ -364,7 +407,6 @@ services:
     container_name: rizz-prometheus
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'

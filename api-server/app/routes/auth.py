@@ -5,6 +5,7 @@ Login, register, and user management with proper security
 
 from flask import Blueprint, request, jsonify, current_app, g
 from app.auth.jwt_handler import create_token, token_required
+from app import limiter
 import bcrypt
 import re
 
@@ -33,6 +34,7 @@ def validate_email(email):
 
 
 @bp.route('/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register():
     """Register new user with proper security"""
     data = request.get_json()
@@ -86,6 +88,7 @@ def register():
 
 
 @bp.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     """Login user with proper security"""
     data = request.get_json()
@@ -107,21 +110,6 @@ def login():
     # # Verify password with bcrypt
     # if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
     #     return jsonify({'error': 'Invalid credentials'}), 401
-
-    # TEMPORARY: For testing only - REMOVE IN PRODUCTION
-    # This should NEVER be in production code
-    if username == 'testuser' and password == 'Test1234!':
-        token = create_token(user_id=999, username=username, expires_days=1)
-        return jsonify({
-            'message': 'Login successful (TEST MODE)',
-            'token': token,
-            'user': {
-                'id': 999,
-                'username': username,
-                'email': 'test@example.com'
-            },
-            'warning': 'TEST MODE - Remove hardcoded credentials before production!'
-        })
 
     # Log failed login attempt
     current_app.logger.warning(f"Failed login attempt for username: {username}")

@@ -44,14 +44,23 @@ import asyncio
 
 # ===== Configuration =====
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'ai-platform-secret-ultimate')
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 
-        'postgresql://user:pass@localhost:5432/rizz-ai-ultimate')
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        raise ValueError("SECRET_KEY environment variable is required")
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    if not SQLALCHEMY_DATABASE_URI:
+        raise ValueError("DATABASE_URL environment variable is required")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-ai')
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
+    if not JWT_SECRET_KEY:
+        raise ValueError("JWT_SECRET_KEY environment variable is required")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
-    REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-    MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/rizz-ai')
+    REDIS_URL = os.environ.get('REDIS_URL')
+    if not REDIS_URL:
+        raise ValueError("REDIS_URL environment variable is required")
+    MONGO_URL = os.environ.get('MONGO_URL')
+    if not MONGO_URL:
+        raise ValueError("MONGO_URL environment variable is required")
     MODEL_PATH = os.environ.get('MODEL_PATH', './models')
     MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
     GPU_ENABLED = os.environ.get('GPU_ENABLED', 'false').lower() == 'true'

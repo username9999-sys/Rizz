@@ -49,6 +49,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # TimescaleDB - Analytics Database
   timescaledb:
@@ -73,6 +78,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Redis - Cache & Message Broker
   redis:
@@ -92,6 +102,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # MongoDB - Analytics & Logs
   mongo:
@@ -114,6 +129,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Elasticsearch - Search Engine
   elasticsearch:
@@ -121,16 +141,18 @@ services:
     container_name: rizz-elasticsearch
     environment:
       discovery.type: single-node
-      xpack.security.enabled: "false"
+      xpack.security.enabled: "true"
       ES_JAVA_OPTS: "-Xms512m -Xmx512m"
       cluster.name: rizz-cluster
+      # Note: For production, you need to set passwords for built-in users
+      # E.g., ELASTIC_PASSWORD: your-password-here
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
       - "9300:9300"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f --user elastic:${ELASTIC_PASSWORD:-changeme} http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -143,6 +165,11 @@ services:
       memlock:
         soft: -1
         hard: -1
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
 
   # MinIO - S3-compatible Storage
   minio:
@@ -166,6 +193,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # ========== MESSAGE QUEUE ==========
   
@@ -190,6 +222,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Kafka - Event Streaming
   kafka:
@@ -220,6 +257,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
 
   # ========== MICROSERVICES ==========
   
@@ -273,6 +315,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Notification Service
   notifications:
@@ -292,6 +339,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Celery Worker for Notifications
   celery-worker:
@@ -332,6 +384,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Storage Service
   storage:
@@ -371,6 +428,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # ========== GATEWAY ==========
   
@@ -408,6 +470,11 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Nginx - Reverse Proxy & SSL
   nginx:
@@ -425,6 +492,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # ========== MONITORING ==========
   
@@ -448,6 +520,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Grafana - Visualization
   grafana:
@@ -469,6 +546,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Jaeger - Distributed Tracing
   jaeger:
@@ -484,6 +566,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # ========== LOGGING ==========
   
@@ -500,6 +587,11 @@ services:
     networks:
       - rizz-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Promtail - Log Collector
   promtail:

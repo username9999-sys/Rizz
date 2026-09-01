@@ -19,6 +19,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Redis Cache
   redis:
@@ -34,6 +39,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # API Server
   api:
@@ -54,6 +64,11 @@ services:
     volumes:
       - ./api-server:/app
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Portfolio Backend
   portfolio:
@@ -72,6 +87,11 @@ services:
     volumes:
       - ./web-app:/app
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # MongoDB
   mongo:
@@ -89,6 +109,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   # Nginx Reverse Proxy
   nginx:
@@ -104,6 +129,11 @@ services:
       - api
       - portfolio
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
 volumes:
   postgres_data:

@@ -30,9 +30,6 @@ if __name__ == '__main__':
     print(f"Health Check: http://{host}:{port}/health")
     print(f"Metrics: http://{host}:{port}/metrics")
     print("=" * 60)
-    print("\nDefault Admin Credentials:")
-    print("  Username: admin")
-    print("  Password: admin123")
-    print("\n⚠️  Change these credentials in production!\n")
+    print("\n⚠️  Remember to set strong admin credentials via environment variables or configuration!\n")
     
     app.run(host=host, port=port, debug=debug)
