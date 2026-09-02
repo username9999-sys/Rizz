@@ -8,6 +8,11 @@ from app.auth.jwt_handler import create_token, token_required
 from app import limiter
 import bcrypt
 import re
+import time
+from collections import defaultdict
+
+# Simple in‑memory login attempt tracker (for demonstration; replace with Redis in prod)
+FAILED_LOGIN_ATTEMPTS = defaultdict(lambda: {'count': 0, 'first_ts': 0})
 
 bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -90,7 +95,7 @@ def register():
 @bp.route('/login', methods=['POST'])
 @limiter.limit("5 per minute")
 def login():
-    """Login user with proper security"""
+    """Login user with proper security and lockout after repeated failures"""
     data = request.get_json()
 
     if not data:
@@ -102,16 +107,41 @@ def login():
     if not all([username, password]):
         return jsonify({'error': 'Missing credentials'}), 400
 
+    # Simple lockout check (5 attempts within 15 minutes)
+    attempt = FAILED_LOGIN_ATTEMPTS[username]
+    now = time.time()
+    if attempt['count'] >= 5 and now - attempt['first_ts'] < 15 * 60:
+        current_app.logger.warning(f"Account lockout triggered for username: {username}")
+        return jsonify({'error': 'Account locked due to too many failed attempts. Try later.'}), 429
+    # Reset window if past 15 minutes
+    if now - attempt['first_ts'] > 15 * 60:
+        attempt['count'] = 0
+        attempt['first_ts'] = now
+
     # TODO: Verify with database
     # user = db.users.find_one({'username': username})
     # if not user:
+    #     # Increment failed attempt
+    #     attempt['count'] += 1
+    #     attempt['first_ts'] = attempt['first_ts'] or now
+    #     current_app.logger.warning(f"Failed login attempt for username: {username}")
     #     return jsonify({'error': 'Invalid credentials'}), 401
     #
     # # Verify password with bcrypt
     # if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+    #     attempt['count'] += 1
+    #     attempt['first_ts'] = attempt['first_ts'] or now
+    #     current_app.logger.warning(f"Failed login attempt for username: {username}")
     #     return jsonify({'error': 'Invalid credentials'}), 401
 
-    # Log failed login attempt
+    # If we were to succeed, reset counter (placeholder success path)
+    # attempt['count'] = 0
+    # attempt['first_ts'] = 0
+
+    # For demonstration we always fail (since DB not implemented)
+    # Increment failed attempt counter
+    attempt['count'] += 1
+    attempt['first_ts'] = attempt['first_ts'] or now
     current_app.logger.warning(f"Failed login attempt for username: {username}")
 
     return jsonify({'error': 'Invalid credentials'}), 401
@@ -119,6 +149,7 @@ def login():
 
 @bp.route('/refresh', methods=['POST'])
 @token_required
+@limiter.limit("10 per minute")
 def refresh_token():
     """Refresh JWT token"""
     try:
@@ -138,6 +169,7 @@ def refresh_token():
 
 @bp.route('/me', methods=['GET'])
 @token_required
+@limiter.limit("30 per minute")
 def get_current_user():
     """Get current user info"""
     return jsonify({
@@ -150,6 +182,7 @@ def get_current_user():
 
 @bp.route('/logout', methods=['POST'])
 @token_required
+@limiter.limit("20 per minute")
 def logout():
     """Logout user (client should discard token)"""
     # TODO: Add token to blacklist

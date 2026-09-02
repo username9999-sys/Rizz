@@ -3,9 +3,14 @@ Test suite for API Server
 Run with: pytest --cov=. --cov-report=html
 """
 
+import os
 import pytest
 from app import app
 import json
+
+# Use environment credentials or defaults for testing
+ADMIN_USERNAME = os.environ.get('TEST_ADMIN_USERNAME', 'testadmin')
+ADMIN_PASSWORD = os.environ.get('TEST_ADMIN_PASSWORD', 'TestPass123!')
 
 @pytest.fixture
 def client():
@@ -18,7 +23,7 @@ def client():
 def auth_token(client):
     """Get auth token for testing"""
     response = client.post('/api/auth/login',
-                          json={'username': 'admin', 'password': 'admin123'})
+                          json={'username': ADMIN_USERNAME, 'password': ADMIN_PASSWORD})
     return response.get_json().get('token')
 
 def test_health_check(client):

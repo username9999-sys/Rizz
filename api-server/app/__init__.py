@@ -4,7 +4,7 @@ Enterprise-grade Flask application with comprehensive features
 Enhanced with: Caching, Rate Limiting, Tracing, Versioning, API Documentation
 """
 
-from flask import Flask, jsonify, request, g
+from flask import Flask, jsonify, request, g, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -19,6 +19,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 import logging
 import json
 import time
+import uuid
 from datetime import datetime
 from functools import wraps
 
@@ -72,7 +73,13 @@ def before_request():
     """Track request timing and metrics"""
     g.start_time = time.time()
     g.request_id = request.headers.get('X-Request-ID', str(uuid.uuid4()))
-    
+
+    # Enforce HTTPS if configured
+    if app.config.get('ENFORCE_HTTPS') and not request.is_secure:
+        # Preserve host, path, and query string
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
+
     # Track in-progress requests
     endpoint = request.endpoint or 'unknown'
     REQUEST_IN_PROGRESS.labels(
@@ -118,7 +125,8 @@ def after_request(response):
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-
+        # Content Security Policy
+        response.headers['Content-Security-Policy'] = app.config.get('CSP_POLICY', "default-src 'self'")
         # Log request
         app.logger.info(f'{request.method} {request.path} {status} {elapsed*1000:.2f}ms')
     

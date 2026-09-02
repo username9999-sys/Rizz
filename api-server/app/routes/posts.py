@@ -9,6 +9,7 @@ from ..models import db, Post, Comment, Tag
 from ..auth import token_required, optional_token, get_current_user
 from ..utils.validators import validate_post_title, validate_post_content
 from ..utils.audit import log_action
+from ...app import limiter
 import re
 
 posts_bp = Blueprint('posts', __name__, url_prefix='/api/posts')
@@ -24,6 +25,7 @@ def generate_slug(title):
 
 @posts_bp.route('', methods=['GET'])
 @optional_token
+@limiter.limit("60 per minute")
 def get_posts():
     """Get all posts with pagination and filtering"""
     # Query parameters
@@ -97,6 +99,7 @@ def get_posts():
 
 @posts_bp.route('/<int:post_id>', methods=['GET'])
 @optional_token
+@limiter.limit("60 per minute")
 def get_post(post_id):
     """Get a single post by ID"""
     post = Post.query.get_or_404(post_id)
@@ -122,6 +125,7 @@ def get_post(post_id):
 
 @posts_bp.route('/slug/<slug>', methods=['GET'])
 @optional_token
+@limiter.limit("60 per minute")
 def get_post_by_slug(slug):
     """Get a single post by slug"""
     post = Post.query.filter_by(slug=slug).first_or_404()
@@ -140,6 +144,7 @@ def get_post_by_slug(slug):
 
 @posts_bp.route('', methods=['POST'])
 @token_required
+@limiter.limit("30 per minute")
 def create_post():
     """Create a new post"""
     data = request.get_json()
@@ -206,6 +211,7 @@ def create_post():
 
 @posts_bp.route('/<int:post_id>', methods=['PUT'])
 @token_required
+@limiter.limit("30 per minute")
 def update_post(post_id):
     """Update a post"""
     post = Post.query.get_or_404(post_id)
@@ -262,6 +268,7 @@ def update_post(post_id):
 
 @posts_bp.route('/<int:post_id>', methods=['DELETE'])
 @token_required
+@limiter.limit("30 per minute")
 def delete_post(post_id):
     """Delete a post"""
     post = Post.query.get_or_404(post_id)
@@ -283,6 +290,7 @@ def delete_post(post_id):
 
 @posts_bp.route('/<int:post_id>/like', methods=['POST'])
 @token_required
+@limiter.limit("30 per minute")
 def like_post(post_id):
     """Like a post"""
     post = Post.query.get_or_404(post_id)
@@ -294,6 +302,7 @@ def like_post(post_id):
 
 @posts_bp.route('/<int:post_id>/comments', methods=['POST'])
 @token_required
+@limiter.limit("30 per minute")
 def create_comment(post_id):
     """Add a comment to a post"""
     post = Post.query.get_or_404(post_id)

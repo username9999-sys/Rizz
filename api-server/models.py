@@ -4,7 +4,24 @@ User, Task, and other core models
 """
 
 from datetime import datetime
+import re
+
 import bcrypt
+
+
+def validate_password_strength(password):
+    """Validate password strength at model level"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters"
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)"
+    return True, "Password is strong"
 
 
 class User:
@@ -14,6 +31,9 @@ class User:
         self.id = id
         self.username = username
         self.email = email
+        is_valid, message = validate_password_strength(password)
+        if not is_valid:
+            raise ValueError(message)
         self.password_hash = bcrypt.hashpw(
             password.encode('utf-8'),
             bcrypt.gensalt(rounds=12)
