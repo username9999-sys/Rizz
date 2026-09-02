@@ -231,3 +231,26 @@ MIT License - See [LICENSE](LICENSE) file.
 **Last Updated**: 2024-01-15  
 **Version**: 0.8.0-alpha (Pre-release, not stable)  
 **Status**: Active Development (Limited)
+
+## New Features Added
+
+- **JWT Refresh & Revocation**: Access tokens now include a JTI and can be revoked via a Redis blacklist. Refresh tokens are issued with rotation and can be revoked as well.
+- **Email Verification & Password Reset**: Users receive a verification link after registration (logged in this stub implementation). Password reset flow using signed tokens is also provided.
+- **Audit Logging**: All privileged actions (register, login, logout, token refresh, email verification, password reset, post CRUD) emit structured JSON logs.
+- **Swagger / OpenAPI Documentation**: Integrated with Flasgger. Visit `/docs` or `/apidocs` to explore the API specification.
+- **CI/CD Pipeline**: GitHub Actions workflow (`.github/workflows/ci.yml`) runs linting, type checking, unit tests with coverage, builds a Docker image, and can push the image on tag releases.
+- **Security Hardening**: Added security headers, CSP, HSTS, enforced strong password policy, and ensured secrets are loaded from environment variables.
+
+## Swagger UI
+
+Start the server (`python api-server/app.py`) and navigate to `http://localhost:5000/docs` (or `http://localhost:5000/apidocs`) to view the interactive API documentation.
+
+## Running Tests
+
+```bash
+pytest -q --cov=app --cov-fail-under=80
+```
+
+## CI/CD
+
+The CI workflow automatically runs on each push and pull request. It will fail if linting, type checking, or test coverage falls below the thresholds.
