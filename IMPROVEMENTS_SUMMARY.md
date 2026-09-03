@@ -14,12 +14,24 @@
 - ✅ **Added password requirements** - Docker Compose fails if passwords not set
 - ✅ **Created `SECURITY.md`** with vulnerability reporting process
 - ✅ **Updated `.gitignore`** to exclude secrets and sensitive files
+- ✅ **Added JWT refresh & revocation** support with JTI
+- ✅ **Implemented email verification flow**
+- ✅ **Implemented password reset flow**
+- ✅ **Added audit logging** for all privileged actions
+- ✅ **Integrated Swagger/OpenAPI documentation**
 
 #### Files Changed:
 - `docker-compose.yml` - All passwords now from environment variables
 - `.env.example` - New file with secure defaults template
-- `.gitignore` - Comprehensive ignore rules
 - `SECURITY.md` - New security policy document
+- `README.md` - Complete rewrite with honest assessment
+- `api-server/app/auth/jwt_handler.py` - JWT refresh & revocation
+- `api-server/app/routes/auth.py` - Auth endpoints with verification/reset
+- `api-server/app/utils/email.py` - Email stub
+- `api-server/app/utils/audit.py` - Audit logging
+- `api-server/app/__init__.py` - Swagger initialization
+- `api-server/requirements.txt` - Added flasgger
+- `.github/workflows/ci.yml` - CI/CD pipeline
 
 ---
 
@@ -49,6 +61,8 @@
 - `CONTRIBUTING.md` - New contribution guidelines
 - `SETUP.md` - New developer setup guide
 - `PROJECT_STATUS.md` - Honest status and roadmap
+- `IMPROVEMENTS_SUMMARY.md` - This file
+- `IMPROVEMENT_ROADMAP.md` - Roadmap
 
 ---
 
@@ -72,7 +86,7 @@
 #### Fixed:
 - ✅ **GitHub Actions workflows** - Automated testing on push/PR
 - ✅ **Test workflow** - Runs pytest with coverage
-- ✅ **Lint workflow** - Python (flake8, black, isort) + JavaScript (ESLint)
+- ✅ **Lint workflow** - Python (ruff, mypy) + JavaScript (ESLint)
 - ✅ **Security scan** - Dependency vulnerability checking
 - ✅ **Workflow badges** - Visible test status in README
 
@@ -162,6 +176,14 @@ You can now:
    npm run lint  # For JavaScript
    ```
 
+5. **Access Swagger UI**
+   ```
+   http://localhost:5000/docs
+   ```
+
+6. **Test authentication flows**
+   - Register → Verify email → Login → Refresh token → Logout
+
 ---
 
 ## ⚠️ WHAT STILL NEEDS WORK
@@ -197,9 +219,10 @@ You can now:
 | CI/CD runs | Check GitHub Actions | ✅ Verifiable |
 | No hardcoded passwords | Check `docker-compose.yml` | ✅ Verifiable |
 | Honest documentation | Read `README.md` | ✅ Verifiable |
+| JWT refresh works | Try `/auth/refresh` endpoint | ✅ Verifiable |
+| Email verification flow | Try `/auth/register` → check log | ✅ Verifiable |
 
 ### Removed Claims:
-
 - ❌ "50,000+ LOC" → Now honest ~2-5K
 - ❌ "500+ features" → Now realistic count
 - ❌ "200+ API endpoints" → Now ~15-20 documented
@@ -208,7 +231,7 @@ You can now:
 
 ---
 
-## 🎯 IMPACT ASSESSMENT
+## 📈 IMPACT ASSESSMENT
 
 ### Credibility: 🔴 → 🟡
 
@@ -240,21 +263,33 @@ You can now:
 3. `CONTRIBUTING.md` - Contribution guide
 4. `SETUP.md` - Setup instructions
 5. `PROJECT_STATUS.md` - Status & roadmap
-6. `api-server/tests/test_comprehensive.py` - Test suite
-7. `api-server/pytest.ini` - Pytest config
-8. `api-server/setup.cfg` - Linting config
-9. `.eslintrc.json` - ESLint config
-10. `.pre-commit-config.yaml` - Pre-commit hooks
-11. `.github/workflows/test.yml` - Test workflow
-12. `.github/workflows/lint.yml` - Lint workflow
-13. `package.json` - Node.js dev dependencies
-14. `IMPROVEMENTS_SUMMARY.md` - This file
+6. `IMPROVEMENTS_SUMMARY.md` - This file
+7. `IMPROVEMENT_ROADMAP.md` - Roadmap
+8. `api-server/tests/test_comprehensive.py` - Test suite
+9. `api-server/pytest.ini` - Pytest config
+10. `api-server/setup.cfg` - Linting config
+11. `.eslintrc.json` - ESLint config
+12. `.pre-commit-config.yaml` - Pre-commit hooks
+13. `.github/workflows/test.yml` - Test workflow
+14. `.github/workflows/ci.yml` - CI/CD pipeline
+15. `package.json` - Node.js dev dependencies
+16. `api-server/app/utils/email.py` - Email stub
+17. `api-server/app/utils/audit.py` - Audit logging
+18. `api-server/app/models.py` - AuditLog model
+19. `api-server/app/__init__.py` - Swagger init
 
 ### Modified:
 1. `docker-compose.yml` - Removed hardcoded passwords
 2. `README.md` - Complete rewrite (honest)
 3. `.gitignore` - Comprehensive rules
 4. `api-server/requirements.txt` - Added dev dependencies
+5. `api-server/app/auth/jwt_handler.py` - JWT refresh & revocation
+6. `api-server/app/routes/auth.py` - Auth endpoints with verification/reset
+7. `api-server/app/__init__.py` - Swagger init
+8. `api-server/requirements-dev.txt` - Added ruff & mypy
+9. `CONTRIBUTING.md` - New contribution guidelines
+10. `IMPROVEMENTS_SUMMARY.md` - Updated summary
+11. `SECURITY.md` - Enhanced security doc
 
 ### Removed:
 1. `CONSOLIDATION.md`
@@ -278,6 +313,10 @@ You can now:
 - ✅ Tests added and verifiable
 - ✅ CI/CD configured and working
 - ✅ Linting and code quality tools setup
+- ✅ JWT refresh & revocation implemented
+- ✅ Email verification & password reset flows added
+- ✅ Audit logging structured JSON
+- ✅ Swagger/OpenAPI documentation generated
 - ✅ Excessive claims removed
 
 **What Didn't Change:**
@@ -290,6 +329,6 @@ A more **honest, secure, and verifiable** project that's useful for learning and
 
 ---
 
-**Last Updated**: 2024-01-15  
+**Last Updated**: 2026-09-03  
 **Version**: 0.8.0-alpha  
 **Status**: Improvements Completed

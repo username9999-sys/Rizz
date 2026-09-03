@@ -19,3 +19,15 @@ data:
   DB_POOL_SIZE: "10"
   DB_POOL_RECYCLE: "3600"
   RATELIMIT_DEFAULT: "100 per hour"
+  # New: Email configuration
+  SMTP_HOST: "smtp.example.com"
+  SMTP_PORT: "587"
+  SMTP_USER: "user@example.com"
+  SMTP_PASS: "your_smtp_password"
+  # New: JWT & Security
+  JWT_AUDIENCE: "rizz-api"
+  JWT_ISSUER: "rizz-api"
+  # New: Feature flags
+  FEATURE_EMAIL_VERIFICATION: "true"
+  FEATURE_PASSWORD_RESET: "true"
+  FEATURE_AUDIT_LOG: "true"

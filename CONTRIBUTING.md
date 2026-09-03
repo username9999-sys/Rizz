@@ -79,41 +79,14 @@ cd api-server && pip install -r requirements.txt
 - Follow PEP 8
 - Use type hints
 - Write docstrings
-- Add tests
+- Write tests
+- Run linting: `ruff check --fix .`
+- Type check: `mypy .`
 
-```python
-def calculate_total(items: list[float], tax_rate: float) -> float:
-    """
-    Calculate total with tax.
-    
-    Args:
-        items: List of item prices
-        tax_rate: Tax rate as decimal
-        
-    Returns:
-        Total amount including tax
-    """
-    subtotal = sum(items)
-    return subtotal * (1 + tax_rate)
-```
-
-**JavaScript:**
+**JavaScript/TypeScript:**
 - Use ES6+ features
 - Add JSDoc comments
 - Handle errors properly
-
-```javascript
-/**
- * Calculate total with tax
- * @param {number[]} items - List of item prices
- * @param {number} taxRate - Tax rate as decimal
- * @returns {number} Total amount including tax
- */
-function calculateTotal(items, taxRate) {
-  const subtotal = items.reduce((sum, item) => sum + item, 0);
-  return subtotal * (1 + taxRate);
-}
-```
 
 #### Testing
 
@@ -144,8 +117,8 @@ refactor: improve database connection handling
 
 1. **Before Submitting:**
    - [ ] Tests pass
-   - [ ] Code is formatted
-   - [ ] Documentation updated
+   - [ ] Code is formatted (`ruff check --fix`)
+   - [ ] Documentation updated (`README.md`, `CONTRIBUTING.md`)
    - [ ] Changelog updated (if applicable)
 
 2. **PR Template:**
@@ -172,7 +145,7 @@ Brief description of changes
 
 3. **Review Process:**
    - Maintainer reviews code
-   - Automated checks run
+   - Automated checks run (lint, type-check, tests)
    - Changes requested (if any)
    - Approval and merge
 
@@ -196,6 +169,10 @@ Brief description of changes
 - Use `.gitignore` properly
 - Report vulnerabilities privately (see SECURITY.md)
 - Follow security best practices
+  - JWT tokens include JTI for revocation
+  - Email verification and password reset flows are tested
+  - Audit logs are structured JSON
+  - Swagger UI is generated from OpenAPI spec
 
 ## 📚 Resources
 
@@ -203,6 +180,7 @@ Brief description of changes
 - [JavaScript Style Guide](https://github.com/airbnb/javascript)
 - [Git Best Practices](https://github.com/git-guides)
 - [Testing Best Practices](https://docs.pytest.org/)
+- [Conventional Commits](https://www.conventionalcommits.org/)
 
 ## ❓ Questions?
 
