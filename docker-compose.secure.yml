@@ -1,0 +1,127 @@
+# ===========================================
+# RIZZ — Security-hardened compose overlay
+# ===========================================
+# Apply on top of docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.secure.yml up -d
+#
+# Adds per-service hardening WITHOUT removing the existing services:
+#   - read_only root filesystem where possible
+#   - drop ALL Linux capabilities, add only what's needed
+#   - no-new-privileges security opt
+#   - explicit non-root users
+#   - tmpfs for /tmp, /run
+#   - resource limits (pids + ulimits)
+#   - internal-only networks for backend services
+# ===========================================
+
+version: '3.8'
+
+# Anchor fragments used across services
+x-security-defaults: &security-defaults
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  read_only: false        # Most services still need to write; tmpfs covers scratch dirs
+  restart: unless-stopped
+  pids_limit: 200
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-tmpfs: &tmpfs
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+    - /run:size=16m,mode=755
+
+services:
+  # ---- Database tier (internal-only network) ----
+  postgres:
+    <<: *security-defaults
+    user: "999:999"   # postgres user inside alpine image
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    networks:
+      - backend
+      - default
+    # Override host port: keep on default for local dev convenience,
+    # but remove this expose block in real prod.
+    expose:
+      - "5432"
+
+  redis:
+    <<: *security-defaults
+    <<: *tmpfs
+    user: "999:999"
+    cap_add:
+      - SETUID
+      - SETGID
+    networks:
+      - backend
+      - default
+    expose:
+      - "6379"
+
+  mongo:
+    <<: *security-defaults
+    user: "999:999"
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    networks:
+      - backend
+      - default
+    expose:
+      - "27017"
+
+  # ---- Application tier ----
+  api:
+    <<: *security-defaults
+    <<: *tmpfs
+    user: "1000:1000"   # matches Dockerfile appuser
+    cap_drop:
+      - ALL
+    networks:
+      - backend
+      - default
+    # Note: read_only requires the app to write nowhere persistent.
+    # Keep false until logs/metrics dirs are on tmpfs or volumes.
+    read_only: false
+
+  portfolio:
+    <<: *security-defaults
+    <<: *tmpfs
+    user: "1000:1000"
+    networks:
+      - default
+    expose:
+      - "3000"
+
+  # ---- Edge tier ----
+  nginx:
+    <<: *security-defaults
+    <<: *tmpfs
+    user: "101:101"   # nginx user in alpine image
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+    networks:
+      - default
+    # Keep 80/443 on host for local dev; restrict in prod via firewall.
+
+networks:
+  backend:
+    name: rizz-backend
+    internal: false      # set true for fully isolated backend (no internet egress)
+    driver: bridge

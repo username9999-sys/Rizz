@@ -53,23 +53,25 @@ def setup_tracing(app):
     """Setup distributed tracing with Jaeger"""
     tracer_provider = TracerProvider()
     trace.set_tracer_provider(tracer_provider)
-    
+
     jaeger_exporter = JaegerExporter(
         agent_host_name='jaeger',
         agent_port=6831,
     )
-    
+
     span_processor = BatchSpanProcessor(jaeger_exporter)
     tracer_provider.add_span_processor(span_processor)
-    
+
     FlaskInstrumentor().instrument_app(app)
-    
+
     return trace.get_tracer(__name__)
 
 
 # ===== Request Timing & Monitoring =====
-@app.before_request
-def before_request():
+_METHODS_WITH_BODY = {"POST", "PUT", "PATCH"}
+
+
+def _before_request():
     """Track request timing and metrics"""
     g.start_time = time.time()
     g.request_id = request.headers.get('X-Request-ID', str(uuid.uuid4()))
@@ -86,6 +88,14 @@ def before_request():
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
+    # Enforce JSON content-type on body-bearing requests (except /metrics)
+    if request.method in _METHODS_WITH_BODY and request.endpoint != 'metrics':
+        ctype = (request.content_type or '').split(';')[0].strip().lower()
+        if ctype and ctype != 'application/json':
+            return jsonify({
+                'error': 'Content-Type must be application/json'
+            }), 415
+
     # Track in-progress requests
     endpoint = request.endpoint or 'unknown'
     REQUEST_IN_PROGRESS.labels(
@@ -95,14 +105,13 @@ def before_request():
     ).inc()
 
 
-@app.after_request
-def after_request(response):
+def _after_request(response):
     """Log request and update metrics"""
     if hasattr(g, 'start_time'):
         elapsed = time.time() - g.start_time
         endpoint = request.endpoint or 'unknown'
         status = response.status_code
-        
+
         # Update metrics
         REQUEST_COUNT.labels(
             method=request.method,
@@ -110,19 +119,19 @@ def after_request(response):
             status=status,
             service='api'
         ).inc()
-        
+
         REQUEST_LATENCY.labels(
             method=request.method,
             endpoint=endpoint,
             service='api'
         ).observe(elapsed)
-        
+
         REQUEST_IN_PROGRESS.labels(
             method=request.method,
             endpoint=endpoint,
             service='api'
         ).dec()
-        
+
         # Add headers
         response.headers['X-Request-ID'] = g.request_id
         response.headers['X-Response-Time'] = f'{elapsed*1000:.2f}ms'
@@ -135,7 +144,7 @@ def after_request(response):
         response.headers['Content-Security-Policy'] = app.config.get('CSP_POLICY', "default-src 'self'")
         # Log request
         app.logger.info(f'{request.method} {request.path} {status} {elapsed*1000:.2f}ms')
-    
+
     return response
 
 
@@ -148,22 +157,27 @@ def create_app(config_name=None):
     
     app = Flask(__name__)
     app.config.from_object(config[config_name])
-    
+
+    # Register request hooks (must happen before routes handle requests)
+    app.before_request(_before_request)
+    app.after_request(_after_request)
+
     # Initialize extensions
     init_extensions(app)
     # Initialize Swagger for OpenAPI documentation
     Swagger(app)
-    
+
+
     # Setup tracing
     if app.config.get('ENABLE_TRACING', False):
         setup_tracing(app)
-    
+
     # Register blueprints
     register_blueprints(app)
-    
+
     # Setup logging
     setup_logging(app)
-    
+
     # Register error handlers
     register_error_handlers(app)
     
@@ -325,10 +339,15 @@ def init_extensions(app):
     # Database
     db.init_app(app)
     migrate = Migrate(app, db)
-    
-    # CORS
-    CORS(app, 
-         origins=app.config.get('CORS_ORIGINS', '*'),
+
+    # CORS — explicit allowlist only; never wildcard
+    cors_origins = app.config.get('CORS_ORIGINS') or []
+    if app.config.get('PRODUCTION') and ('*' in cors_origins or not cors_origins):
+        raise RuntimeError(
+            "CORS_ORIGINS must be a non-empty explicit list in production"
+        )
+    CORS(app,
+         origins=cors_origins,
          supports_credentials=True,
          allow_headers=['Content-Type', 'Authorization', 'X-Request-ID'],
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
