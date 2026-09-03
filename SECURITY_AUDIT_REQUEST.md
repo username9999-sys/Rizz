@@ -204,9 +204,9 @@ This project is used by:
 ## 📚 RESOURCES FOR AUDITORS
 
 ### Documentation
-- [SECURITY_POLICY.md](../SECURITY_POLICY.md) - Security policies
-- [PROJECT_STATUS.md](../PROJECT_STATUS.md) - Project maturity
-- [README.md](../README.md) - Project overview
+- [SECURITY_POLICY.md](SECURITY_POLICY.md) - Security policies
+- [PROJECT_STATUS.md](PROJECT_STATUS.md) - Project maturity
+- [README.md](README.md) - Project overview
 
 ### Tools We Use
 - Flask (Python backend)

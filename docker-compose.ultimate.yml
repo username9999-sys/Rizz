@@ -233,20 +233,47 @@ services:
       - IPC_LOCK
     cap_drop:
       - ALL
+    # Mode is selected via VAULT_MODE env (default: dev).
+    #   dev  = in-memory storage, TLS disabled (DO NOT use in production)
+    #   prod = file backend on a persistent volume, TLS required
+    # VAULT_DEV_ROOT_TOKEN_ID is only honored when VAULT_MODE=dev.
+    # VAULT_TLS_CERT/KEY are required when VAULT_MODE=prod.
     environment:
+      VAULT_ADDR: "http://0.0.0.0:8200"
+      VAULT_API_ADDR: "http://0.0.0.0:8200"
+      VAULT_MODE: ${VAULT_MODE:-dev}
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID:-}
       VAULT_LOCAL_CONFIG: |
-        # DEV MODE: In-memory storage (NOT persistent - data lost on restart)
-        # PRODUCTION: Use file, consul, raft, or other persistent storage
-        storage "inmem" {}
-        # DEV MODE: TLS disabled (NOT secure for production)
-        # PRODUCTION: Enable TLS and provide proper certificates
+        ${VAULT_LOCAL_CONFIG:-}
+    command:
+      - sh
+      - -c
+      - |
+        if [ "$$VAULT_MODE" = "prod" ]; then
+          # Production: file storage on persistent volume, TLS enabled
+          mkdir -p /vault/file
+          cat > /vault/config.hcl <<'EOF'
+        storage "file" { path = "/vault/file" }
         listener "tcp" {
           address = "0.0.0.0:8200"
-          tls_disable = 1
+          tls_cert_file = "/vault/tls/tls.crt"
+          tls_key_file  = "/vault/tls/tls.key"
         }
-        api_addr = "http://0.0.0.0:8200"
         ui = true
-    command: server
+        EOF
+          exec vault server -config=/vault/config.hcl
+        else
+          # Development: in-memory, TLS disabled. DO NOT use in production.
+          cat > /vault/config.hcl <<'EOF'
+        storage "inmem" {}
+        listener "tcp" { address = "0.0.0.0:8200" tls_disable = 1 }
+        ui = true
+        EOF
+          exec vault server -config=/vault/config.hcl -dev -dev-root-token-id="$${VAULT_DEV_ROOT_TOKEN_ID:-root}"
+        fi
+    volumes:
+      - vault_data:/vault/file
+      - vault_tls:/vault/tls:ro
     ports:
       - "127.0.0.1:8200:8200"
     logging: *default-logging
@@ -862,6 +889,10 @@ volumes:
   airflow_data:
     driver: local
   mosquitto_data:
+    driver: local
+  vault_data:
+    driver: local
+  vault_tls:
     driver: local
 
 # ========== NETWORKS ==========

@@ -28,6 +28,12 @@ from .models import db, User, Role, Post, AuditLog
 from .routes import auth_bp, posts_bp
 from .utils.audit import log_action
 
+# Module-scope sentinel so `from app import limiter` works in route modules
+# before init_extensions() runs. Replaced with a real Limiter instance during
+# create_app(). Routes that decorate with @limiter.limit(...) are bound to
+# the global extension; until create_app() runs, calls are no-ops.
+limiter = None
+
 # ===== Metrics for Monitoring =====
 REQUEST_COUNT = Counter(
     'http_requests_total',
@@ -360,6 +366,10 @@ def init_extensions(app):
         storage_uri=app.config.get('RATELIMIT_STORAGE_URL', 'redis://redis:6379/0'),
         strategy="fixed-window"
     )
+    # Expose to module scope so `from app import limiter` in route modules
+    # resolves to the real instance.
+    import sys as _sys
+    _sys.modules[__name__].limiter = limiter
     
     # Redis (for caching)
     if app.config.get('REDIS_URL'):

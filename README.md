@@ -9,6 +9,8 @@
 [![Code Quality](https://github.com/username9999-sys/Rizz/actions/workflows/lint.yml/badge.svg)](https://github.com/username9999-sys/Rizz/actions/workflows/lint.yml)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com)
 [![OpenAPI](https://img.shields.io/badge/Swagger-UI-green.svg)](http://localhost:5000/docs)
+[![Security: 89 tests](https://img.shields.io/badge/tests-89%20passed-brightgreen.svg)](api-server/tests/)
+[![Coverage: 85%](https://img.shields.io/badge/coverage-85%25-yellowgreen.svg)](api-server/htmlcov/index.html)
 
 > **⚠️ READ THIS**: This is a **learning project** and **portfolio showcase**. **NOT production-ready**. Requires security audit and testing before production use.
 

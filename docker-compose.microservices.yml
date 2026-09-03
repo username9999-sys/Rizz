@@ -142,17 +142,17 @@ services:
     environment:
       discovery.type: single-node
       xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"   # TODO: enable TLS in prod
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set in .env}
       ES_JAVA_OPTS: "-Xms512m -Xmx512m"
       cluster.name: rizz-cluster
-      # Note: For production, you need to set passwords for built-in users
-      # E.g., ELASTIC_PASSWORD: your-password-here
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:9300:9300"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f --user elastic:${ELASTIC_PASSWORD:-changeme} http://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f --user elastic:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -165,6 +165,8 @@ services:
       memlock:
         soft: -1
         hard: -1
+    security_opt:
+      - no-new-privileges:true
     deploy:
       resources:
         limits:
