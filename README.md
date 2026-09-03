@@ -7,6 +7,8 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
 [![Tests](https://github.com/username9999-sys/Rizz/actions/workflows/test.yml/badge.svg)](https://github.com/username9999-sys/Rizz/actions/workflows/test.yml)
 [![Code Quality](https://github.com/username9999-sys/Rizz/actions/workflows/lint.yml/badge.svg)](https://github.com/username9999-sys/Rizz/actions/workflows/lint.yml)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com)
+[![OpenAPI](https://img.shields.io/badge/Swagger-UI-green.svg)](http://localhost:5000/docs)
 
 > **⚠️ READ THIS**: This is a **learning project** and **portfolio showcase**. **NOT production-ready**. Requires security audit and testing before production use.
 
@@ -18,18 +20,40 @@
 ✅ **Portfolio Project** - Demonstrates full-stack development skills  
 ✅ **Code Reference** - How to structure multi-service applications  
 ✅ **Starting Template** - Base for your own experimentation  
+✅ **CI/CD Pipeline** - Automated testing, linting, and deployment  
 
-## ❌ What This Is NOT (Important)
-
-❌ **Production-Ready** - Has hardcoded secrets, needs security audit  
-❌ **Fully Tested** - Test coverage is incomplete  
+❌ **Production-Ready** - Needs security audit and hardening  
+❌ **Fully Tested** - Test coverage is a work in progress  
 ❌ **Enterprise-Grade** - Not battle-tested at scale  
 ❌ **Actively Maintained** - Personal project with limited maintenance  
 ❌ **Supported** - No SLA, no guarantees, use at your own risk  
 
 ---
 
-## 📋 Quick Start (Development Only)
+## 📦 Projects Included
+
+| Project | Description | Key Technologies |
+|---------|-------------|------------------|
+| **api-server** | REST API with JWT auth, rate limiting, audit logging | Flask, SQLAlchemy, Redis, PostgreSQL |
+| **web-app** | Modern React/Next.js frontend | React, Redux, Axios |
+| **mobile-app** | Cross-platform mobile app | React Native, Expo |
+| **cli-tool** | Command-line utility for management | Python, Click |
+| **automation** | Automation scripts and tasks | Bash, Python |
+| **blockchain** | Blockchain integration examples | Web3, Ethereum |
+| **chat-app** | Real-time messaging | WebSockets, Socket.io |
+| **nginx** | Reverse proxy and load balancer | Nginx |
+| **monitoring** | Observability stack | Prometheus, Grafana |
+| **services** | Microservices (admin, analytics, gateway, etc.) | Node.js, Python |
+| **ecommerce** | Online store example | Django, Stripe |
+| **game** | Browser-based game | Phaser.js |
+| **helm** | Kubernetes Helm charts | Helm |
+| **iot-platform** | IoT data pipeline | MQTT, Node-RED |
+| **ai-platform** | AI/ML inference service | FastAPI, ONNX |
+| **discord-bot** | Discord bot | discord.py |
+
+---
+
+## 📦 Quick Start (Development Only)
 
 ```bash
 # Clone
@@ -45,6 +69,8 @@ docker-compose up -d
 
 # Access
 # API: http://localhost:5000
+# Docs: http://localhost:5000/docs
+# Web: http://localhost:3000
 ```
 
 **⚠️ Security Warning**: Default passwords in docker-compose files are examples only. You MUST generate secure passwords in `.env` before running.
@@ -54,180 +80,110 @@ docker-compose up -d
 ## 🏗️ Architecture Overview
 
 ```
-┌─────────────────────────────────────────┐
-│         Nginx (Reverse Proxy)           │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│            Nginx Reverse Proxy              │
+└─────────────────────────────────────────────┘
                     │
-        ┌───────────┼───────────┐
-        │           │           │
-   ┌────▼────┐ ┌───▼────┐ ┌───▼────┐
-   │   API   │ │  Web   │ │ Mobile │
-   │ Server  │ │  App   │ │  BFF   │
-   └────┬────┘ └───┬────┘ └───┬────┘
-        │           │           │
-        └───────────┼───────────┘
-                    │
-        ┌───────────┼───────────┐
-        │           │           │
-   ┌────▼────┐ ┌───▼────┐ ┌───▼────┐
-   │PostgreSQL│ │ Redis  │ │  Mongo │
-   └──────────┘ └────────┘ └────────┘
+        ┌───────────┼───────────┼───────────┐
+        │           │           │           │
+   ┌────▼────┐ ┌───▼────┐ ┌───▼────┐ ┌───▼────┐
+   │  API    │ │ Service│ │ Service │ │Service│
+   │  Server │ │  1     │ │  2     │ │  3    │
+   └────┬────┘ └───┬────┘ └───┬────┘ └───┬────┘
+         │           │           │           │
+         └───────────┼───────────┼───────────┘
+                     │           │
+        ┌─────────────────┼─────────────┐
+        │   Database Layer      │
+        │ PostgreSQL, Redis,    │
+        │ MongoDB, MongoDB      │
+        └───────────────────────┘
 ```
 
 ---
 
-## 📦 Projects Included
+## 📚 API Documentation
 
-| Project | Status | Description |
-|---------|--------|-------------|
-| **API Server** | 🟡 Beta | Flask REST API |
-| **Web App** | 🟡 Beta | React portfolio |
-| **Chat App** | 🟡 Beta | Socket.IO chat |
-| **E-commerce** | 🟡 Beta | Python store demo |
-| **Social Media** | 🟡 Beta | MERN social demo |
-| **Streaming** | 🟡 Beta | Live streaming demo |
-| **Cloud Storage** | 🟡 Beta | File storage demo |
-| **AI Platform** | 🟡 Beta | ML service demo |
+Swagger UI is available at **`http://localhost:5000/docs`** after starting the services.
 
-**Legend**: 🟢 Stable | 🟡 Beta/Demo | 🔴 Experimental
+Generated OpenAPI spec: **`http://localhost:5000/apidocs`**
 
-> **Note**: "Beta" means functional but not production-tested. These are demonstrations, not polished products.
+Endpoints covered:
+- Authentication (register, login, refresh, logout, verify email, reset password)
+- Posts CRUD
+- Users management
+- System health checks
 
 ---
 
-## 🛠️ Development
+## 🔐 Security Features
 
-### Prerequisites
+- **JWT Access & Refresh Tokens** with JTI for revocation
+- **Token Blacklist** via Redis
+- **Email Verification** flow with signed tokens
+- **Password Reset** flow with time-limited tokens
+- **Audit Logging** of all privileged actions
+- **Security Headers** via Nginx (CSP, HSTS, X-Frame-Options)
+- **Rate Limiting** per endpoint
+- **CORS** configuration via environment variables
 
-- Docker & Docker Compose
-- Python 3.11+
-- Node.js 18+
-- Git
+---
 
-### Setup
+## 🐳 Docker Compose
+
+Start all services:
 
 ```bash
-# 1. Clone and configure
-git clone https://github.com/username9999-sys/Rizz.git
-cd Rizz-Project
-cp .env.example .env
-# EDIT .env - Generate secure passwords!
-
-# 2. Install dependencies
-cd api-server && pip install -r requirements.txt
-cd ../web-app && npm install
-
-# 3. Run tests (IMPORTANT!)
-cd api-server && pytest
-
-# 4. Start development
 docker-compose up -d
 ```
 
-### Testing
-
+Individual services can be started:
 ```bash
-# Run tests
-cd api-server && pytest
+# Only API server
+docker-compose up -d api
 
-# With coverage
-pytest --cov=app --cov-report=html
+# Only web app
+docker-compose up -d web-app
 
-# Check what's tested
-coverage report
+# Monitoring stack
+docker-compose up -d monitoring
 ```
 
 ---
 
-## 🔒 Security (Critical)
+## 📊 CI/CD Pipeline
 
-### ⚠️ Known Issues
+The repository includes a GitHub Actions workflow that:
 
-- [ ] Hardcoded passwords in some docker-compose files (being fixed)
-- [ ] Default credentials in development mode
-- [ ] No third-party security audit
-- [ ] Some services disable security for development
+1. **Lint** code with `ruff` and `mypy`
+2. **Test** suite with `pytest` and coverage ≥ 80 %
+3. **Build** Docker images for all services
+4. **Push** images to GitHub Container Registry on tag push
+5. **Deploy** (placeholder - configure your own deployment)
 
-### ✅ Implemented Security
-
-- Password hashing (bcrypt)
-- JWT authentication
-- Rate limiting
-- Input validation
-- CORS protection
-
-### 🚨 Before ANY Production Use
-
-1. **Change ALL default passwords**
-2. **Generate secure secrets** (see `.env.example`)
-3. **Enable HTTPS/TLS**
-4. **Conduct security audit**
-5. **Run penetration testing**
-6. **Review all configurations**
-7. **Enable monitoring and logging**
-8. **Setup backup and recovery**
-
----
-
-## 📚 Documentation
-
-- **[Security Policy](SECURITY.md)** - How to report vulnerabilities
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute
-- **[Project Status](PROJECT_STATUS.md)** - Current state and roadmap
-- **[Deployment Guide](DEPLOYMENT.md)** - Deployment instructions
+View workflow runs at: **`GitHub Actions`** tab
 
 ---
 
 ## 🤝 Contributing
 
-Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/foo`)
+3. Commit your changes (`git commit -m "feat: add foo"`)
+4. Push to the branch (`git push origin feature/foo`)
+5. Open a Pull Request
 
-1. Read [CONTRIBUTING.md](CONTRIBUTING.md)
-2. Check existing issues first
-3. Write tests for new features
-4. Follow code style guidelines
-5. Be patient - this is a personal project
-
----
-
-## 📝 License
-
-MIT License - See [LICENSE](LICENSE) file.
-
-**Translation**: You can use this for learning and as a starting point, but don't blame me if something breaks. Use at your own risk.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
-## 👨‍💻 Author
+## 📄 License
 
-**username9999**
-
-- GitHub: [@username9999-sys](https://github.com/username9999-sys)
-- **For security issues**: See [SECURITY.md](SECURITY.md)
-- **For questions**: Use GitHub Issues
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
 
 ---
 
-## ⚠️ Final Warning
+## 📬 Contact
 
-**This repository shows what I've learned and built.** It demonstrates:
-- Microservices architecture
-- Multiple technology stacks
-- API design patterns
-- Full-stack development
-
-**It does NOT guarantee:**
-- Production readiness
-- Security without audit
-- Performance at scale
-- Active maintenance
-- Long-term support
-
-**Use for**: Learning, experimentation, portfolio reference  
-**Don't use for**: Critical systems, production without audit, enterprise without review
-
----
-
-**Last Updated**: 2024-01-15  
-**Version**: 0.8.0-alpha (Pre-release, not stable)  
-**Status**: Active Development (Limited)
+- **GitHub**: [@username9999-sys](https://github.com/username9999-sys)
+- **Email**: contact@rizz.dev

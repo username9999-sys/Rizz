@@ -29,6 +29,12 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: rizz-api-sa
+      securityContext:
+        runAsNonRoot: true
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
       containers:
         - name: api-server
           image: ghcr.io/username9999-sys/rizz/api-server:latest
@@ -37,11 +43,46 @@ spec:
             - containerPort: 5000
               name: http
               protocol: TCP
-          envFrom:
-            - configMapRef:
-                name: rizz-api-config
-            - secretRef:
-                name: rizz-api-secret
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rizz-api-secret
+                  key: secret_key
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rizz-api-secret
+                  key: jwt_secret
+            - name: DATABASE_URL
+              valueFrom:
+                configMapRef:
+                  name: rizz-api-config
+            - name: REDIS_URL
+              valueFrom:
+                secretRef:
+                  name: rizz-api-secret
+                  key: redis_url
+            - name: SMTP_HOST
+              valueFrom:
+                configMapRef:
+                  name: rizz-api-config
+            - name: SMTP_PORT
+              valueFrom:
+                configMapRef:
+                  name: rizz-api-config
+            - name: SMTP_USER
+              valueFrom:
+                secretRef:
+                  name: rizz-api-secret
+                  key: smtp_user
+            - name: SMTP_PASS
+              valueFrom:
+                secretRef:
+                  name: rizz-api-secret
+                  key: smtp_pass
+            - name: AUDIT_LOGGER_LEVEL
+              value: "INFO"
           resources:
             requests:
               memory: "256Mi"
@@ -68,6 +109,16 @@ spec:
           volumeMounts:
             - name: tmp-volume
               mountPath: /tmp
+          volumeDevices: []
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
       volumes:
         - name: tmp-volume
           emptyDir: {}

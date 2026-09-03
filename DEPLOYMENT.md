@@ -14,6 +14,7 @@
 6. [Backup & Recovery](#backup--recovery)
 7. [Monitoring Setup](#monitoring-setup)
 8. [Security Hardening](#security-hardening)
+9. [New Feature Deployment](#new-feature-deployment)
 
 ---
 
@@ -99,7 +100,7 @@ docker-compose ps
 docker-compose logs -f
 
 # 7. Run health checks
-curl http://localhost:5000/api/health
+curl http://localhost:5000/health
 ```
 
 ### Multi-Server Deployment
@@ -513,6 +514,118 @@ pip-audit
 
 ---
 
+## 🆕 NEW FEATURE DEPLOYMENT
+
+### JWT Refresh & Revocation
+
+The API now includes JWT refresh token support with revocation capabilities:
+
+1. **Access Tokens** include a `jti` (JWT ID) claim for revocation
+2. **Refresh Tokens** are rotated on each use
+3. **Redis Blacklist** stores revoked token JTIs
+
+**Required Environment Variables:**
+```env
+SECRET_KEY=your-secret-key
+JWT_SECRET_KEY=your-jwt-secret
+REDIS_URL=redis://:password@redis:6379/0
+```
+
+**Deployment Notes:**
+- Ensure Redis is available and accessible
+- The blacklist TTL matches token expiration
+- No database migration required (uses Redis)
+
+### Email Verification
+
+Users receive verification emails after registration:
+
+1. **Signed Tokens** using `itsdangerous.URLSafeTimedSerializer`
+2. **24-hour Expiration** for verification links
+3. **Logged Emails** in development (SMTP in production)
+
+**Required Environment Variables:**
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=user@example.com
+SMTP_PASS=your-smtp-password
+```
+
+**Production Setup:**
+- Configure real SMTP server
+- Update `email.py` to use actual SMTP
+- Test email delivery before deployment
+
+### Password Reset
+
+Secure password reset flow:
+
+1. **Time-limited Tokens** (1 hour expiration)
+2. **Signed with itsdangerous**
+3. **Rate Limited** (5 requests/minute)
+
+### Audit Logging
+
+All privileged actions emit structured JSON logs:
+
+```json
+{
+  "timestamp": "2026-09-03T10:00:00Z",
+  "level": "INFO",
+  "action": "USER_LOGIN",
+  "user_id": "abc123",
+  "ip": "192.168.1.1",
+  "request_id": "req-123",
+  "details": {
+    "username": "testuser",
+    "success": true
+  }
+}
+```
+
+**Deployment Notes:**
+- Logs are stored in database `audit_log` table
+- Ensure database migration runs: `alembic upgrade head`
+- Configure log level via `AUDIT_LOGGER_LEVEL` env var
+
+### Swagger/OpenAPI Documentation
+
+Interactive API documentation available at `/docs`:
+
+**Access:**
+- Swagger UI: `http://localhost:5000/docs`
+- OpenAPI Spec: `http://localhost:5000/apidocs`
+
+**Deployment Notes:**
+- Enabled via Flasgger in `app/__init__.py`
+- No additional infrastructure required
+- Automatically generates from route docstrings
+
+### CI/CD Pipeline
+
+GitHub Actions workflow (`.github/workflows/ci.yml`):
+
+```bash
+# Triggers on:
+- Push to main/develop branches
+- Pull requests to main
+- Tag creation (for Docker image push)
+
+# Stages:
+1. Lint (ruff)
+2. Type check (mypy)
+3. Test (pytest with coverage ≥ 80%)
+4. Build Docker image
+5. Push to GHCR on tag
+```
+
+**Required Secrets in GitHub:**
+- `GITHUB_TOKEN` (automatic)
+- Container registry credentials (for GHCR)
+
+---
+
 ## 📞 SUPPORT
 
 For deployment issues:
@@ -522,4 +635,4 @@ For deployment issues:
 
 ---
 
-**Last Updated:** March 2026
+**Last Updated:** 2026-09-03

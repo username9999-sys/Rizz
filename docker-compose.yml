@@ -56,6 +56,17 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env file}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env file}
+      # Email configuration
+      SMTP_HOST: ${SMTP_HOST:-smtp.example.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-user@example.com}
+      SMTP_PASS: ${SMTP_PASS:-your_smtp_password}
+      # Audit logging
+      AUDIT_LOGGER_LEVEL: ${AUDIT_LOGGER_LEVEL:-INFO}
+      # Feature flags
+      FEATURE_EMAIL_VERIFICATION: ${FEATURE_EMAIL_VERIFICATION:-true}
+      FEATURE_PASSWORD_RESET: ${FEATURE_PASSWORD_RESET:-true}
+      FEATURE_AUDIT_LOG: ${FEATURE_AUDIT_LOG:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,20 +81,20 @@ services:
           cpus: '1.0'
           memory: 512M
 
-  # Portfolio Backend
-  portfolio:
+  # Web App (Frontend)
+  web-app:
     build: ./web-app
-    container_name: rizz-portfolio
+    container_name: rizz-web-app
     ports:
       - "3000:3000"
     environment:
       PORT: 3000
-      MONGODB_URI: mongodb://mongo:27017/portfolio
-      JWT_SECRET: ${JWT_SECRET:-portfolio-secret}
-      ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-CHANGE_ME_GENERATE_STRONG_PASSWORD}
+      API_BASE_URL: http://api:5000
+      # Feature flags
+      FEATURE_EMAIL_VERIFICATION: ${FEATURE_EMAIL_VERIFICATION:-true}
+      FEATURE_PASSWORD_RESET: ${FEATURE_PASSWORD_RESET:-true}
     depends_on:
-      - mongo
+      - api
     volumes:
       - ./web-app:/app
     restart: unless-stopped
@@ -93,27 +104,32 @@ services:
           cpus: '1.0'
           memory: 512M
 
-  # MongoDB
-  mongo:
-    image: mongo:7
-    container_name: rizz-mongo
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: mongo_user
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-CHANGE_ME_GENERATE_STRONG_PASSWORD}
+  # Monitoring (Prometheus + Grafana)
+  monitoring:
+    image: prom/prometheus:latest
+    container_name: rizz-prometheus
     volumes:
-      - mongo_data:/data/db
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
     ports:
-      - "27017:27017"
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "9090:9090"
+    depends_on:
+      - api
+    networks:
+      - rizz-network
+    restart: unless-stopped
     deploy:
       resources:
         limits:
           cpus: '1.0'
-          memory: 512M
+          memory: 1024M
 
   # Nginx Reverse Proxy
   nginx:
@@ -127,7 +143,7 @@ services:
       - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       - api
-      - portfolio
+      - web-app
     restart: unless-stopped
     deploy:
       resources:
@@ -135,11 +151,30 @@ services:
           cpus: '1.0'
           memory: 512M
 
+  # PostgreSQL Exporter for metrics
+  postgres-exporter:
+    image: postgres-exporter:0.19.0
+    container_name: rizz-postgres-exporter
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-rizz_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rizz_api}
+    depends_on:
+      - postgres
+    networks:
+      - rizz-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+networks:
+  rizz-network:
+    driver: bridge
+
 volumes:
   postgres_data:
   redis_data:
-  mongo_data:
-
-networks:
-  default:
-    name: rizz-network
+  prometheus_data:

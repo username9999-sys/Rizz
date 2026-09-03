@@ -16,6 +16,7 @@ Version: 6.0.0 | Last Updated: March 2026
 6. [API Reference](#api-reference)
 7. [Deployment](#deployment)
 8. [Testing](#testing)
+8. [New Features (2026)](#new-features-2026)
 9. [Troubleshooting](#troubleshooting)
 10. [Contributing](#contributing)
 
@@ -63,6 +64,7 @@ docker-compose logs -f
 | IoT Platform | http://localhost:5006 | 5006 |
 | Grafana | http://localhost:3001 | 3001 |
 | Prometheus | http://localhost:9090 | 9090 |
+| **Swagger UI (API Docs)** | **http://localhost:5000/docs** | **5000** |
 
 ---
 
@@ -159,7 +161,7 @@ pip install -r requirements.txt
 python app.py
 ```
 **Tech:** Flask, PostgreSQL, Redis
-**Features:** REST API, JWT Auth, Rate limiting
+**Features:** REST API, JWT Auth, Rate limiting, **JWT Refresh & Revocation**, **Email Verification**, **Password Reset**, **Audit Logging**, **Swagger/OpenAPI**
 
 #### 5. E-commerce (`ecommerce/`)
 ```bash
@@ -274,6 +276,21 @@ STRIPE_SECRET_KEY=sk_...
 # Services
 MQTT_BROKER=mqtt://localhost:1883
 ELASTICSEARCH_URL=http://localhost:9200
+
+# New: Email Configuration
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=user@example.com
+SMTP_PASS=your-smtp-password
+
+# New: Feature Flags
+FEATURE_EMAIL_VERIFICATION=true
+FEATURE_PASSWORD_RESET=true
+FEATURE_AUDIT_LOG=true
+
+# New: JWT Configuration
+JWT_ACCESS_TOKEN_EXPIRES_HOURS=1
+JWT_REFRESH_TOKEN_EXPIRES_DAYS=30
 ```
 
 ### Docker Configuration
@@ -323,6 +340,18 @@ POST /api/auth/register
   "password": "password123"
 }
 
+# Response
+{
+  "message": "User registered successfully",
+  "username": "user",
+  "email": "user@example.com",
+  "tokens": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
+  },
+  "note": "Check email for verification link (logged in development)"
+}
+
 # Login
 POST /api/auth/login
 {
@@ -332,12 +361,54 @@ POST /api/auth/login
 
 # Response
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": "123",
-    "username": "user",
-    "email": "user@example.com"
+  "message": "Login successful",
+  "tokens": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
   }
+}
+
+# Refresh Token
+POST /api/auth/refresh
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
+}
+
+# Response
+{
+  "message": "Token refreshed successfully",
+  "tokens": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
+  }
+}
+
+# Logout
+POST /api/auth/logout
+Authorization: Bearer <access_token>
+
+# Response
+{
+  "message": "Logout successful"
+}
+```
+
+### Email Verification & Password Reset
+
+```bash
+# Verify Email
+GET /api/auth/verify?token=<verification_token>
+
+# Request Password Reset
+POST /api/auth/request-reset
+{
+  "email": "user@example.com"
+}
+
+# Reset Password
+POST /api/auth/reset-password?token=<reset_token>
+{
+  "password": "newsecurepassword123"
 }
 ```
 
@@ -351,22 +422,26 @@ PUT    /api/users/:id      # Update user
 DELETE /api/users/:id      # Delete user
 ```
 
-#### Products (E-commerce)
+#### Posts
 ```
-GET    /api/products       # List products
-POST   /api/products       # Create product
-GET    /api/products/:id   # Get product
-PUT    /api/products/:id   # Update product
-DELETE /api/products/:id   # Delete product
+GET    /api/posts          # List posts (paginated, filterable)
+GET    /api/posts/:id      # Get post by ID
+GET    /api/posts/slug/:slug # Get post by slug
+POST   /api/posts          # Create post (auth required)
+PUT    /api/posts/:id      # Update post (auth required)
+DELETE /api/posts/:id      # Delete post (auth required)
+POST   /api/posts/:id/like # Like post (auth required)
+POST   /api/posts/:id/comments # Add comment (auth required)
 ```
 
-#### Files (Cloud Storage)
+#### System
 ```
-GET    /api/files          # List files
-POST   /api/files/upload   # Upload file
-GET    /api/files/:id      # Get file
-DELETE /api/files/:id      # Delete file
-POST   /api/files/:id/share # Share file
+GET    /health             # Health check (detailed)
+GET    /ready              # Kubernetes readiness probe
+GET    /live               # Kubernetes liveness probe
+GET    /metrics            # Prometheus metrics
+GET    /docs               # Swagger UI
+GET    /apidocs            # OpenAPI spec
 ```
 
 ---
@@ -429,6 +504,10 @@ kubectl scale deployment api --replicas=3 -n rizz
 - [ ] Set up CDN
 - [ ] Configure auto-scaling
 - [ ] Test disaster recovery
+- [ ] Enable JWT refresh & revocation
+- [ ] Configure email verification (SMTP)
+- [ ] Configure audit logging
+- [ ] Verify Swagger UI accessible
 
 ---
 
@@ -459,6 +538,100 @@ open htmlcov/index.html
 # Coverage requirements
 # Aim for >80% coverage
 ```
+
+---
+
+## 🆕 NEW FEATURES (2026)
+
+### 1. JWT Refresh & Revocation
+
+**What:** Access tokens now include a `jti` (JWT ID) claim enabling revocation. Refresh tokens are rotated on each use.
+
+**How it works:**
+- Access token: 1-hour expiry, includes `jti`, `type: "access"`
+- Refresh token: 30-day expiry, includes `jti`, `type: "refresh"`
+- On logout: Both tokens' `jti` added to Redis blacklist
+- On refresh: Old refresh token revoked, new pair issued
+
+**Endpoints:**
+- `POST /api/auth/refresh` - Refresh access token
+- `POST /api/auth/logout` - Revoke tokens (blacklist)
+
+### 2. Email Verification
+
+**What:** Users receive a verification email after registration with a signed token.
+
+**Flow:**
+1. Register → receives access + refresh tokens + verification email
+2. Click verification link → `GET /api/auth/verify?token=...`
+3. Email marked as verified in database
+
+**Security:**
+- Signed with `itsdangerous.URLSafeTimedSerializer`
+- 24-hour expiration
+- Tamper-proof (BadSignature on modification)
+
+**Endpoint:**
+- `GET /api/auth/verify?token=<token>`
+
+### 3. Password Reset
+
+**What:** Secure password reset flow with time-limited signed tokens.
+
+**Flow:**
+1. Request reset → `POST /api/auth/request-reset` with email
+2. Receive reset email with link
+3. Click link → `POST /api/auth/reset-password?token=...` with new password
+
+**Security:**
+- 1-hour expiration
+- Rate limited (5 req/min)
+- Password strength enforced
+
+**Endpoints:**
+- `POST /api/auth/request-reset`
+- `POST /api/auth/reset-password?token=<token>`
+
+### 4. Audit Logging
+
+**What:** Structured JSON audit logs for all privileged actions.
+
+**Logged Actions:**
+- `USER_REGISTER`, `USER_LOGIN`, `USER_LOGOUT`
+- `TOKEN_REFRESH`, `EMAIL_VERIFIED`
+- `PASSWORD_RESET_REQUEST`, `PASSWORD_RESET`
+- `POST_CREATED`, `POST_UPDATED`, `POST_DELETED`
+- `ACCOUNT_LOCKED`
+
+**Format:**
+```json
+{
+  "timestamp": "2026-09-03T10:00:00.123Z",
+  "level": "INFO",
+  "action": "USER_LOGIN",
+  "user_id": "abc123",
+  "ip": "192.168.1.1",
+  "request_id": "req-123",
+  "details": {
+    "username": "testuser",
+    "success": true
+  }
+}
+```
+
+### 5. Swagger/OpenAPI Documentation
+
+**What:** Interactive API documentation generated automatically.
+
+**Access:**
+- Swagger UI: `http://localhost:5000/docs`
+- OpenAPI Spec: `http://localhost:5000/apidocs`
+
+**Features:**
+- Try endpoints directly from browser
+- View request/response schemas
+- JWT authentication for protected endpoints
+- Auto-generated from Flask route docstrings
 
 ---
 
