@@ -100,6 +100,42 @@ class Task:
 
 class Post:
     """Blog post model"""
+    # existing definition remains unchanged
+
+# ---------------------------------------------------------------------------
+# AuditLog model for structured audit entries
+# ---------------------------------------------------------------------------
+
+class AuditLog:
+    """Audit log entry model"""
+    def __init__(self, user_id, action, entity_type=None, entity_id=None,
+                 old_values=None, new_values=None, ip_address=None, user_agent=None):
+        self.id = None
+        self.user_id = user_id
+        self.action = action
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+        self.old_values = old_values
+        self.new_values = new_values
+        self.ip_address = ip_address
+        self.user_agent = user_agent
+        self.created_at = datetime.utcnow()
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'action': self.action,
+            'entity_type': self.entity_type,
+            'entity_id': self.entity_id,
+            'old_values': self.old_values,
+            'new_values': self.new_values,
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent,
+            'created_at': self.created_at.isoformat()
+        }
+
+    """Blog post model"""
 
     def __init__(self, title, content, author_id, slug=None, id=None):
         self.id = id

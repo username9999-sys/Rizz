@@ -29,6 +29,8 @@ class Config:
 
     # CORS
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    # Optional whitelist of hostnames allowed for HTTPS redirect (empty = allow all)
+    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')

@@ -9,7 +9,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_migrate import Migrate
-from prometheus_client import make_wsgi_app, Counter, Histogram, generate_latest
+from prometheus_client import make_wsgi_app, Counter, Histogram, Gauge, generate_latest
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from opentelemetry import trace
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
@@ -76,6 +76,12 @@ def before_request():
 
     # Enforce HTTPS if configured
     if app.config.get('ENFORCE_HTTPS') and not request.is_secure:
+        # Only redirect if host is allowed (or whitelist empty)
+        allowed = app.config.get('ALLOWED_HOSTS', [])
+        host = request.host.split(':')[0]
+        if allowed and host not in allowed:
+            # Host not whitelisted – reject request
+            return jsonify({'error': 'Host not allowed for HTTPS redirect'}), 400
         # Preserve host, path, and query string
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
@@ -133,6 +139,8 @@ def after_request(response):
     return response
 
 
+from flasgger import Swagger
+
 def create_app(config_name=None):
     """Application factory with enhanced features"""
     if config_name is None:
@@ -143,6 +151,8 @@ def create_app(config_name=None):
     
     # Initialize extensions
     init_extensions(app)
+    # Initialize Swagger for OpenAPI documentation
+    Swagger(app)
     
     # Setup tracing
     if app.config.get('ENABLE_TRACING', False):
@@ -334,9 +344,13 @@ def init_extensions(app):
     
     # Redis (for caching)
     if app.config.get('REDIS_URL'):
-        import redis
-        redis_client = redis.from_url(app.config['REDIS_URL'])
-        app.extensions['redis'] = redis_client
+        try:
+            import redis
+            redis_client = redis.from_url(app.config['REDIS_URL'])
+            app.extensions['redis'] = redis_client
+        except Exception as e:
+            app.logger.warning(f"Redis extension not loaded: {e}")
+            # Continue without Redis; lockout and blacklist will fall back to in‑memory
     
     # Elasticsearch (for search)
     if app.config.get('ELASTICSEARCH_URL'):
