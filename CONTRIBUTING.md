@@ -2,11 +2,18 @@
 
 Thank you for your interest in contributing! This document provides guidelines for contributing.
 
+> **Before you start, please read**:
+> - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — community standards
+> - [SECURITY_POLICY.md](SECURITY_POLICY.md) — how to report vulnerabilities
+> - [RELEASING.md](RELEASING.md) — versioning & release process
+> - [CHANGELOG.md](CHANGELOG.md) — what changed in each release
+> - [IMPROVEMENT_ROADMAP.md](IMPROVEMENT_ROADMAP.md) — what's planned
+
 ## 🎯 Code of Conduct
 
-- Be respectful and inclusive
-- Provide constructive feedback
-- Focus on what's best for the community
+This project adheres to the [Contributor Covenant](CODE_OF_CONDUCT.md).
+By participating, you are expected to uphold this code. Report
+unacceptable behavior to conduct@rizz.dev.
 
 ## 📋 How to Contribute
 
@@ -192,3 +199,105 @@ Brief description of changes
 ---
 
 **Thank you for contributing!** 🎉
+
+---
+
+## 🛠 Development workflow
+
+### Local setup (one command)
+
+```bash
+./scripts/dev.sh           # full Docker stack
+./scripts/dev.sh --api-only   # Python-only, no Docker
+./scripts/dev.sh --test       # run pytest
+./scripts/dev.sh --logs       # tail service logs
+./scripts/dev.sh --stop       # tear down
+./scripts/dev.sh --reset      # nuke volumes and restart
+```
+
+See [`scripts/dev.sh`](scripts/dev.sh) for details. The script
+generates secrets automatically on first run.
+
+### Before submitting a pull request
+
+Run the local checks in this order. They mirror what CI runs:
+
+```bash
+# 1. Lint and syntax
+cd api-server
+python3 -m pytest tests/ -v                # all tests must pass
+
+# 2. Coverage
+python3 -m coverage run --source=app/utils,app/config --omit='*/__init__.py' \
+    --rcfile=/dev/null -m pytest tests/
+python3 -m coverage report --rcfile=/dev/null -m
+
+# 3. Type hints
+python3 -m pytest tests/test_type_hints.py
+
+# 4. Security
+cd ..
+python3 scripts/check-links-local.py       # broken markdown links
+python3 scripts/check-security.py          # OpenAPI spec coverage
+
+# 5. YAML validation
+python3 -c "import yaml; yaml.safe_load(open('docker-compose.yml'))"
+```
+
+### Commit message style
+
+We use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
+`chore`, `security`, `ops`.
+
+Examples:
+- `feat(api): add /api/v1/me/data-export endpoint`
+- `fix(cache): fix double-count when value is None`
+- `docs(readme): clarify docker compose usage`
+- `security(totp): constant-time compare for verification`
+- `ops(monitoring): add Prometheus alert for disk space`
+
+### Pull request process
+
+1. Fork & branch from `master`:
+   ```bash
+   git checkout -b feat/my-feature
+   ```
+2. Make focused commits (one logical change per commit)
+3. Run the local checks above
+4. Push & open PR against `master`
+5. Wait for CI to pass (lint, tests, security scan)
+6. Address review feedback
+7. Squash-merge after approval
+
+### Code style
+
+  - **Python**: PEP 8 + Black formatting + type hints on public API
+  - **JavaScript**: ESLint (config in `.eslintrc.json`)
+  - **Markdown**: wrap at 100 cols, sentence case headers
+  - **Commit messages**: imperative mood, 72-char subject, wrap body at 72
+
+### What to work on
+
+  - Good first issues: look for `good-first-issue` label
+  - Roadmap: [`IMPROVEMENT_ROADMAP.md`](IMPROVEMENT_ROADMAP.md) has the
+    full plan
+  - Security: see [`SECURITY_AUDIT_REQUEST.md`](SECURITY_AUDIT_REQUEST.md)
+    for areas needing review
+  - Documentation: small improvements are always welcome
+
+### Getting help
+
+  - Discord: `#rizz-dev` (see `discord-bot/` for the bot)
+  - Issues: GitHub issue tracker with the `question` label
+  - Email: dev@rizz.dev (no SLA, but we read everything)
+
