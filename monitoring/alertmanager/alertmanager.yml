@@ -1,0 +1,112 @@
+# Alertmanager configuration for the Rizz platform.
+#
+# Routes alerts by severity:
+#   - critical: PagerDuty (24/7 on-call)
+#   - warning:  Slack #rizz-alerts
+#   - info:     email digest
+
+global:
+  resolve_timeout: 5m
+  # SMTP for email notifications (set via env: SMTP_HOST, etc.)
+  smtp_smarthost: "${SMTP_HOST}:${SMTP_PORT}"
+  smtp_from: "${SMTP_FROM:-alerts@rizz.dev}"
+  smtp_auth_username: "${SMTP_USER}"
+  smtp_auth_password: "${SMTP_PASSWORD}"
+  smtp_require_tls: true
+
+# Templates
+templates:
+  - "/etc/alertmanager/templates/*.tmpl"
+
+# Route tree
+route:
+  receiver: "default"
+  group_by: ["alertname", "service", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Critical: page immediately
+    - matchers:
+        - severity = "critical"
+      receiver: "pagerduty"
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: true  # also notify Slack for visibility
+    # Critical -> Slack
+    - matchers:
+        - severity = "critical"
+      receiver: "slack-critical"
+      group_wait: 10s
+    # Warning -> Slack
+    - matchers:
+        - severity = "warning"
+      receiver: "slack-warning"
+      group_wait: 1m
+    # Info -> email
+    - matchers:
+        - severity = "info"
+      receiver: "email"
+
+receivers:
+  - name: "default"
+    webhook_configs:
+      - url: "http://hooks:5000/alert-default"
+        send_resolved: true
+
+  - name: "pagerduty"
+    pagerduty_configs:
+      - routing_key: "${PAGERDUTY_ROUTING_KEY}"
+        send_resolved: true
+        severity: "critical"
+        description: "{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}"
+
+  - name: "slack-critical"
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#rizz-critical"
+        send_resolved: true
+        title: "[CRITICAL] {{ .GroupLabels.alertname }}"
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          Service: {{ .Labels.service }}
+          Instance: {{ .Labels.instance }}
+          {{ end }}
+        title_link: "http://grafana.example.com/alerting"
+
+  - name: "slack-warning"
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#rizz-alerts"
+        send_resolved: true
+        title: "[WARN] {{ .GroupLabels.alertname }}"
+        text: |
+          {{ range .Alerts }}
+          {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}
+
+  - name: "email"
+    email_configs:
+      - to: "ops@rizz.dev"
+        send_resolved: true
+        headers:
+          Subject: "[Rizz] {{ .GroupLabels.alertname }} ({{ .Status }})"
+        html: |
+          <h2>{{ .GroupLabels.alertname }}</h2>
+          {{ range .Alerts }}
+          <p><b>{{ .Annotations.summary }}</b></p>
+          <p>{{ .Annotations.description }}</p>
+          <pre>{{ .Labels | toYaml }}</pre>
+          <hr>
+          {{ end }}
+
+# Inhibition: don't alert on warning if critical is firing for same service
+inhibit_rules:
+  - source_matchers:
+      - severity = "critical"
+    target_matchers:
+      - severity = "warning"
+    equal: ["service", "alertname"]

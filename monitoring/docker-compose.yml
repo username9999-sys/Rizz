@@ -1,164 +1,172 @@
-version: '3.8'
+# Monitoring stack for the Rizz platform.
+#
+# Components:
+#   - Prometheus       (metrics scrape + rules)
+#   - Alertmanager     (alert routing -> Slack / PagerDuty / email)
+#   - Grafana          (dashboards)
+#   - Loki             (log aggregation)
+#   - Promtail         (log shipper)
+#   - Exporters        (postgres / redis / node / nginx)
+#
+# Run:
+#   docker compose -f monitoring/docker-compose.yml up -d
+#
+# Required env vars (set in .env):
+#   GRAFANA_ADMIN_USER, GRAFANA_ADMIN_PASSWORD
+#   SLACK_WEBHOOK_URL, PAGERDUTY_ROUTING_KEY
+#   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
 
 services:
-  # Prometheus - Metrics Collection
+  # ---------- Metrics ----------
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.0
     container_name: rizz-prometheus
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+      - --web.enable-lifecycle
     ports:
-      - "9090:9090"
-    networks:
-      - monitoring
+      - "127.0.0.1:9090:9090"
+    networks: [monitoring]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID]
 
-  # Grafana - Visualization
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: rizz-alertmanager
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    networks: [monitoring]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+
+  # ---------- Logs ----------
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: rizz-loki
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    ports:
+      - "127.0.0.1:3100:3100"
+    networks: [monitoring]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+
+  promtail:
+    image: grafana/promtail:3.2.0
+    container_name: rizz-promtail
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - promtail_data:/tmp
+    command: -config.file=/etc/promtail/config.yml
+    networks: [monitoring]
+    restart: unless-stopped
+    depends_on: [loki]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+
+  # ---------- Visualization ----------
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.2.0
     container_name: rizz-grafana
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER required}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD required}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=http://localhost:3001
       - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+      - GF_INSTALL_PLUGINS=
     ports:
-      - "3001:3000"
-    depends_on:
-      - prometheus
-    networks:
-      - monitoring
+      - "127.0.0.1:3001:3000"
+    networks: [monitoring]
+    depends_on: [prometheus, loki]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID]
 
-  # Loki - Log Aggregation
-  loki:
-    image: grafana/loki:latest
-    container_name: rizz-loki
-    volumes:
-      - ./monitoring/loki.yml:/etc/loki/local-config.yaml
-      - loki_data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-    ports:
-      - "3100:3100"
-    networks:
-      - monitoring
-
-  # Promtail - Log Shipper
-  promtail:
-    image: grafana/promtail:latest
-    container_name: rizz-promtail
-    volumes:
-      - ./monitoring/promtail.yml:/etc/promtail/config.yml
-      - /var/log:/var/log
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/config.yml
-    depends_on:
-      - loki
-    networks:
-      - monitoring
-
-  # Elasticsearch - Search & Analytics
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    container_name: rizz-elasticsearch
+  # ---------- Exporters ----------
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: rizz-postgres-exporter
     environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_EXPORTER_USER}:${POSTGRES_EXPORTER_PASSWORD}@postgres:5432/${POSTGRES_DB:-rizz_api}?sslmode=disable
     ports:
-      - "9200:9200"
-      - "9300:9300"
-    networks:
-      - monitoring
+      - "127.0.0.1:9187:9187"
+    networks: [monitoring]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
 
-  # Kibana - Elasticsearch Dashboard
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.0
-    container_name: rizz-kibana
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    ports:
-      - "5601:5601"
-    depends_on:
-      - elasticsearch
-    networks:
-      - monitoring
-
-  # Logstash - Log Processing
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.11.0
-    container_name: rizz-logstash
-    volumes:
-      - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline
-    ports:
-      - "5000:5000"
-      - "5044:5044"
-    depends_on:
-      - elasticsearch
-    networks:
-      - monitoring
-
-  # Jaeger - Distributed Tracing
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: rizz-jaeger
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-    ports:
-      - "16686:16686"  # UI
-      - "4317:4317"    # OTLP gRPC
-      - "4318:4318"    # OTLP HTTP
-    networks:
-      - monitoring
-
-  # Redis - Cache & Metrics
-  redis:
-    image: redis:7-alpine
-    container_name: rizz-redis-monitoring
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_monitoring_data:/data
-    networks:
-      - monitoring
-
-  # Node Exporter - System Metrics
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: rizz-node-exporter
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    container_name: rizz-redis-exporter
     command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.ignored-mount-points'
-      - '^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)'
+      - --redis.addr=redis://redis:6379
     ports:
-      - "9100:9100"
-    networks:
-      - monitoring
+      - "127.0.0.1:9121:9121"
+    networks: [monitoring]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
 
-volumes:
-  prometheus_data:
-  grafana_data:
-  loki_data:
-  elasticsearch_data:
-  redis_monitoring_data:
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: rizz-node-exporter
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "127.0.0.1:9100:9100"
+    networks: [monitoring]
+    pid: host
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
 
 networks:
   monitoring:
+    name: rizz-monitoring
     driver: bridge
+
+volumes:
+  prometheus_data:
+  alertmanager_data:
+  loki_data:
+  promtail_data:
+  grafana_data:

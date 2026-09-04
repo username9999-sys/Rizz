@@ -1,0 +1,48 @@
+# Loki configuration for log aggregation.
+#
+# Loki is the lightweight alternative to full ELK. It indexes labels
+# (not full text), relying on Promtail/similar agents to push logs.
+# This keeps storage costs low and integration with Grafana/Prometheus
+# uniform.
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  ring:
+    kvstore:
+      store: inmemory
+  replication_factor: 1
+  path_prefix: /loki
+
+schema_config:
+  configs:
+    - from: 2026-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-index
+    cache_location: /loki/tsdb-cache
+  filesystem:
+    directory: /loki/chunks
+
+limits_config:
+  retention_period: 30d           # keep logs for 30 days
+  ingestion_rate_mb: 16
+  ingestion_burst_size_mb: 32
+  max_entries_limit_per_query: 5000
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h  # 7 days
+
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  delete_request_store: filesystem

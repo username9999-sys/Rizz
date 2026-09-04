@@ -1,0 +1,71 @@
+# Prometheus configuration for the Rizz platform.
+#
+# Scrape targets:
+#   - prometheus itself
+#   - alertmanager
+#   - the API server (port 5000, /metrics)
+#   - the portfolio web app (if it exposes /metrics)
+#   - postgres_exporter (optional, for DB metrics)
+#   - node_exporter (host metrics)
+#   - redis_exporter (cache metrics)
+#
+# Adjust the targets below to match your deployment.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: rizz-local
+    environment: development
+
+# Alertmanager endpoint
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+# Rules for alerting
+rule_files:
+  - "alerts.yml"
+
+# Scrape configs
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "alertmanager"
+    static_configs:
+      - targets: ["alertmanager:9093"]
+
+  - job_name: "rizz-api"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["api:5000"]
+        labels:
+          service: "api"
+          tier: "backend"
+
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+        labels:
+          service: "postgres"
+
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+        labels:
+          service: "redis"
+
+  - job_name: "node"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: "host"
+
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+        labels:
+          service: "nginx"

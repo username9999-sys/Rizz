@@ -1,0 +1,81 @@
+# ============================================
+# RIZZ — dev override compose
+# ============================================
+# This file overrides the production-leaning settings of
+# docker-compose.yml for local development.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml up
+#
+# Key changes:
+#   - Source code is bind-mounted (live edits visible without rebuild)
+#   - Flask debug mode + auto-reload
+#   - Ports exposed on 0.0.0.0 (not just localhost) for browser access
+#   - Postgres / Redis data kept across restarts
+#   - Log levels set to DEBUG
+#
+# DO NOT use this file in production.
+
+services:
+  api:
+    build:
+      target: development
+    command:
+      - "flask"
+      - "--app"
+      - "app:create_app"
+      - "run"
+      - "--host=0.0.0.0"
+      - "--port=5000"
+      - "--debug"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - LOG_LEVEL=DEBUG
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./api-server:/app
+      - /app/__pycache__
+    ports:
+      - "0.0.0.0:5000:5000"
+    # Keep container running even if entrypoint fails (so you can shell in)
+    stdin_open: true
+    tty: true
+
+  portfolio:
+    build:
+      target: development
+    command:
+      - "npm"
+      - "run"
+      - "dev"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./web-app:/app
+      - /app/node_modules
+    ports:
+      - "0.0.0.0:3000:3000"
+
+  nginx:
+    volumes:
+      # Mount custom dev config in front of the production one
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+
+  postgres:
+    ports:
+      - "0.0.0.0:5432:5432"  # for psql from host
+
+  redis:
+    ports:
+      - "0.0.0.0:6379:6379"  # for redis-cli from host
+    command:
+      - "redis-server"
+      - "--requirepass=${REDIS_PASSWORD}"
+      - "--appendonly"
+      - "no"
+      - "--save"
+      - ""

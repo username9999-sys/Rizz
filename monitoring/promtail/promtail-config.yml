@@ -1,0 +1,56 @@
+# Promtail configuration: collects logs from containers/files and ships
+# them to Loki.
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    batchwait: 1s
+    batchsize: 1048576
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+scrape_configs:
+  # ---- Docker container logs ----
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ["__meta_docker_container_name"]
+        target_label: "container"
+        regex: "/(.*)"
+      - source_labels: ["__meta_docker_container_log_stream"]
+        target_label: "stream"
+      - source_labels: ["__meta_docker_compose_service"]
+        target_label: "service"
+    pipeline_stages:
+      # Parse JSON if present
+      - json:
+          expressions:
+            level: level
+            logger: logger
+            msg: msg
+            request_id: request_id
+      - labels:
+          level:
+          service:
+      # Drop debug-level noise
+      - match:
+          selector: '{level="debug"}'
+        action: drop
+
+  # ---- Host system logs ----
+  - job_name: system
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: syslog
+          __path__: /var/log/*.log
