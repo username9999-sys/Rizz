@@ -1,0 +1,156 @@
+name: Security & Dependency Scan
+
+on:
+  push:
+    branches: [ main, develop, master ]
+  pull_request:
+    branches: [ main, develop, master ]
+  schedule:
+    # Run weekly to catch newly disclosed CVEs
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # ---------- Python dependency audit (pip-audit) ----------
+  python-deps:
+    name: Python dependencies (pip-audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api-server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: api-server/requirements*.txt
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit production deps
+        continue-on-error: true   # don't block PRs on new CVEs
+        run: |
+          pip-audit -r requirements.txt --format json --output python-audit.json || true
+          if [ -s python-audit.json ]; then
+            echo "::warning::Vulnerabilities found. See python-audit.json"
+            pip-audit -r requirements.txt
+          fi
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-audit
+          path: api-server/python-audit.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------- JavaScript dependency audit (npm audit) ----------
+  js-deps:
+    name: JavaScript dependencies (npm audit)
+    runs-on: ubuntu-latest
+    defaults:
+        run:
+          working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Find package.json files
+        id: find-pkg
+        run: |
+          PKGS=$(find . -name "package.json" -not -path "*/node_modules/*" -not -path "*/.git/*" | head -20)
+          echo "pkgs<<EOF" >> $GITHUB_OUTPUT
+          echo "$PKGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Run npm audit on each package
+        continue-on-error: true
+        run: |
+          echo "${{ steps.find-pkg.outputs.pkgs }}" | while read -r pkg; do
+            [ -z "$pkg" ] && continue
+            echo "::group::Auditing $pkg"
+            (cd "$(dirname "$pkg")" && \
+             [ -f package-lock.json ] && npm audit --audit-level=high || \
+             echo "no package-lock.json, skipping strict audit")
+            echo "::endgroup::"
+          done
+
+  # ---------- Secret scanning (gitleaks) ----------
+  secrets:
+    name: Secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for better detection
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        with:
+          args: --redact --no-banner
+
+  # ---------- Static security analysis (bandit) ----------
+  bandit:
+    name: Python static security (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install bandit
+        run: pip install bandit
+
+      - name: Run bandit
+        run: |
+          bandit -r api-server/ \
+            --exclude api-server/tests,api-server/migrations \
+            --severity-level medium \
+            --confidence-level medium \
+            --format json \
+            --output bandit-report.json \
+            || true
+          # Always show the human-readable summary
+          bandit -r api-server/ \
+            --exclude api-server/tests,api-server/migrations \
+            --severity-level medium \
+            --confidence-level medium \
+            || true
+
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------- Dockerfile lint (hadolint) ----------
+  dockerfile-lint:
+    name: Dockerfile lint (hadolint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: api-server/Dockerfile
+          failure-threshold: warning

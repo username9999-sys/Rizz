@@ -4,79 +4,84 @@ Configuration for different environments
 """
 
 import os
-from pathlib import Path
+from typing import Any, ClassVar, List, Optional
 
 
 class Config:
-    """Base configuration"""
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-change-in-production')
+    """Base configuration."""
+
+    SECRET_KEY: ClassVar[Optional[str]] = os.environ.get(
+        "SECRET_KEY", "dev-secret-key-change-in-production"
+    )
+    JWT_SECRET_KEY: ClassVar[Optional[str]] = os.environ.get(
+        "JWT_SECRET_KEY", "jwt-secret-change-in-production"
+    )
 
     # Database
-    DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///rizz_api.db')
-    REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    DATABASE_URL: ClassVar[str] = os.environ.get("DATABASE_URL", "sqlite:///rizz_api.db")
+    REDIS_URL: ClassVar[str] = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
     # Rate limiting
-    RATELIMIT_DEFAULT = "100 per hour"
-    RATELIMIT_STORAGE_URL = REDIS_URL
+    RATELIMIT_DEFAULT: ClassVar[str] = "100 per hour"
+    RATELIMIT_STORAGE_URL: ClassVar[str] = REDIS_URL
 
     # Upload
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
+    MAX_CONTENT_LENGTH: ClassVar[int] = 16 * 1024 * 1024  # 16MB
 
     # CORS — comma-separated env var, no wildcard fallback
-    _cors_env = os.environ.get('CORS_ORIGINS', '')
-    CORS_ORIGINS = [o.strip() for o in _cors_env.split(',') if o.strip()] or [
-        "http://localhost:3000", "http://localhost:5000"
-    ]
+    _cors_env: ClassVar[str] = os.environ.get("CORS_ORIGINS", "")
+    CORS_ORIGINS: ClassVar[List[str]] = (
+        [o.strip() for o in _cors_env.split(",") if o.strip()]
+        or ["http://localhost:3000", "http://localhost:5000"]
+    )
 
     # Security headers
-    CSP_POLICY = os.environ.get(
-        'CSP_POLICY',
-        "default-src 'self'; frame-ancestors 'none'; base-uri 'self'"
+    CSP_POLICY: ClassVar[str] = os.environ.get(
+        "CSP_POLICY",
+        "default-src 'self'; frame-ancestors 'none'; base-uri 'self'",
     )
-    ENFORCE_HTTPS = os.environ.get('ENFORCE_HTTPS', 'false').lower() == 'true'
+    ENFORCE_HTTPS: ClassVar[bool] = os.environ.get("ENFORCE_HTTPS", "false").lower() == "true"
 
     @staticmethod
-    def init_app(app):
+    def init_app(app: Any) -> None:
         pass
 
 
 class DevelopmentConfig(Config):
-    """Development configuration"""
-    DEBUG = True
-    TESTING = False
-    PRODUCTION = False
+    """Development configuration."""
 
-    # Use SQLite for development
-    DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///rizz_api_dev.db')
+    DEBUG: ClassVar[bool] = True
+    TESTING: ClassVar[bool] = False
+    PRODUCTION: ClassVar[bool] = False
+
+    DATABASE_URL: ClassVar[str] = os.environ.get("DATABASE_URL", "sqlite:///rizz_api_dev.db")
 
 
 class ProductionConfig(Config):
-    """Production configuration"""
-    DEBUG = False
-    TESTING = False
-    PRODUCTION = True
+    """Production configuration. Fails closed on missing secrets or wildcard CORS."""
 
-    # Require environment variables in production
-    SECRET_KEY = os.environ.get('SECRET_KEY')
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
+    DEBUG: ClassVar[bool] = False
+    TESTING: ClassVar[bool] = False
+    PRODUCTION: ClassVar[bool] = True
+
+    SECRET_KEY: ClassVar[Optional[str]] = os.environ.get("SECRET_KEY")
+    JWT_SECRET_KEY: ClassVar[Optional[str]] = os.environ.get("JWT_SECRET_KEY")
 
     @classmethod
-    def init_app(cls, app):
+    def init_app(cls, app: Any) -> None:
         Config.init_app(app)
 
-        # Fail-closed on missing secrets
-        missing = [k for k in ('SECRET_KEY', 'JWT_SECRET_KEY') if not app.config.get(k)]
+        missing: List[str] = [
+            k for k in ("SECRET_KEY", "JWT_SECRET_KEY") if not app.config.get(k)
+        ]
         if missing:
             raise RuntimeError(
                 f"Missing required production env vars: {', '.join(missing)}"
             )
 
-        # In production, refuse wildcard CORS
-        if '*' in app.config.get('CORS_ORIGINS', []):
+        if "*" in app.config.get("CORS_ORIGINS", []):
             raise RuntimeError("CORS_ORIGINS cannot include '*' in production")
 
-        # Log to stderr
         import logging
         from logging import StreamHandler
         app.logger.addHandler(StreamHandler())
@@ -84,24 +89,20 @@ class ProductionConfig(Config):
 
 
 class TestingConfig(Config):
-    """Testing configuration"""
-    TESTING = True
-    DEBUG = True
-    PRODUCTION = False
+    """Testing configuration."""
 
-    # Use in-memory SQLite for tests
-    DATABASE_URL = 'sqlite:///:memory:'
+    TESTING: ClassVar[bool] = True
+    DEBUG: ClassVar[bool] = True
+    PRODUCTION: ClassVar[bool] = False
 
-    # Disable rate limiting for tests
-    RATELIMIT_ENABLED = False
-
-    # Permissive CORS for test client
-    CORS_ORIGINS = ["http://localhost", "http://test"]
+    DATABASE_URL: ClassVar[str] = "sqlite:///:memory:"
+    RATELIMIT_ENABLED: ClassVar[bool] = False
+    CORS_ORIGINS: ClassVar[List[str]] = ["http://localhost", "http://test"]
 
 
-config = {
-    'development': DevelopmentConfig,
-    'production': ProductionConfig,
-    'testing': TestingConfig,
-    'default': DevelopmentConfig
+config: dict = {
+    "development": DevelopmentConfig,
+    "production": ProductionConfig,
+    "testing": TestingConfig,
+    "default": DevelopmentConfig,
 }
